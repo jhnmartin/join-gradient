@@ -4,10 +4,15 @@
 
     <UDashboardSidebar
       v-model:open="open"
+      :mobile-breakpoint="960"
       collapsible
       resizable
       class="bg-(--ui-bg-elevated)/25"
-      :ui="{ footer: 'lg:border-t lg:border-(--ui-border)' }"
+      :ui="{
+        base: 'relative h-[100dvh] lg:h-screen',
+        wrapper: 'lg:!block',
+        footer: 'lg:border-t lg:border-(--ui-border)',
+      }"
     >
       <template #header="{ collapsed }">
         <div
@@ -15,6 +20,13 @@
           :class="{ 'flex-col': collapsed }"
         >
           <h1 class="text-xl font-display">team.gradient</h1>
+          <UButton
+            color="gray"
+            variant="ghost"
+            icon="i-lucide-menu"
+            class="lg:hidden"
+            @click="open = !open"
+          />
         </div>
       </template>
 
@@ -43,7 +55,7 @@
       </template>
     </UDashboardSidebar>
 
-    <main class="flex-1 overflow-x-hidden">
+    <main class="flex-1 overflow-x-hidden min-h-[100dvh] lg:min-h-screen">
       <slot />
     </main>
   </UDashboardGroup>
@@ -100,6 +112,13 @@ const groups = computed(() => [
     items: links.flat(),
   },
 ]);
+
+// Close sidebar on route change for mobile
+watch(route, () => {
+  if (window.innerWidth < 960) {
+    open.value = false;
+  }
+});
 
 // Cookie consent toast
 onMounted(async () => {
