@@ -1,64 +1,122 @@
 <template>
-  <div>
-    <UPageHero
-      title="Nuxt UI Pro - Starter"
-      description="Nuxt UI Pro is a collection of premium components built on top of Nuxt UI to create beautiful & responsive applications in minutes."
-      :links="[{
-        label: 'Get started',
-        to: 'https://ui.nuxt.com/getting-started/installation/pro/nuxt',
-        target: '_blank',
-        trailingIcon: 'i-lucide-arrow-right',
-        size: 'xl'
-      }, {
-        label: 'Use this template',
-        to: 'https://github.com/nuxt-ui-pro/starter',
-        target: '_blank',
-        icon: 'i-simple-icons-github',
-        size: 'xl',
-        color: 'neutral',
-        variant: 'subtle'
-      }]"
-    />
+  <NuxtLayout name="dashboard">
+    <UContainer>
+      <div class="space-y-8">
+        <!-- Welcome Section -->
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+            Welcome back, {{ user?.email?.split("@")[0] }}!
+          </h2>
+          <p class="mt-1 text-gray-600 dark:text-gray-400">
+            Here's what's happening with your projects today.
+          </p>
+        </div>
 
-    <UPageSection
-      id="features"
-      title="The freedom to build anything"
-      description="Nuxt UI Pro ships with an extensive set of advanced components that cover a wide range of use-cases. Carefully crafted to reduce boilerplate code without sacrificing flexibility."
-      :features="[{
-        icon: 'i-lucide-wrench',
-        title: 'Fully customizable',
-        description: 'Customize any component through the App Config or fine-tune specific instances with the ui prop, just like Nuxt UI.'
-      }, {
-        icon: 'i-lucide-square-stack',
-        title: 'Powerful slot system',
-        description: 'Take full control of component layouts and content with Vue\'s comprehensive slot system for maximum flexibility.'
-      }, {
-        icon: 'i-lucide-smartphone',
-        title: 'Mobile-first & responsive',
-        description: 'Built with a mobile-first approach, all components automatically adapt to any screen size while maintaining a polished look.'
-      }]"
-    />
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between">
+                <h3
+                  class="text-base font-semibold text-gray-900 dark:text-white"
+                >
+                  Active Projects
+                </h3>
+                <UIcon
+                  name="i-lucide-folder"
+                  class="w-5 h-5 text-primary-500"
+                />
+              </div>
+            </template>
+            <p class="text-2xl font-semibold">12</p>
+          </UCard>
 
-    <UPageSection>
-      <UPageCTA
-        title="Start with Nuxt UI Pro today!"
-        description="Nuxt UI Pro is free in development, but you need a license to use it in production."
-        variant="subtle"
-        :links="[{
-          label: 'Buy now',
-          to: 'https://ui.nuxt.com/pro/purchase',
-          target: '_blank',
-          icon: 'i-lucide-shopping-cart',
-          color: 'neutral'
-        }, {
-          label: 'License',
-          to: 'https://ui.nuxt.com/getting-started/license',
-          target: '_blank',
-          trailingIcon: 'i-lucide-circle-help',
-          color: 'neutral',
-          variant: 'subtle'
-        }]"
-      />
-    </UPageSection>
-  </div>
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between">
+                <h3
+                  class="text-base font-semibold text-gray-900 dark:text-white"
+                >
+                  Pending Tasks
+                </h3>
+                <UIcon
+                  name="i-lucide-check-square"
+                  class="w-5 h-5 text-primary-500"
+                />
+              </div>
+            </template>
+            <p class="text-2xl font-semibold">24</p>
+          </UCard>
+
+          <UCard>
+            <template #header>
+              <div class="flex items-center justify-between">
+                <h3
+                  class="text-base font-semibold text-gray-900 dark:text-white"
+                >
+                  Team Members
+                </h3>
+                <UIcon name="i-lucide-users" class="w-5 h-5 text-primary-500" />
+              </div>
+            </template>
+            <p class="text-2xl font-semibold">8</p>
+          </UCard>
+        </div>
+
+        <!-- Recent Activity -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Recent Activity
+              </h3>
+              <UButton
+                color="gray"
+                variant="ghost"
+                icon="i-lucide-arrow-right"
+                to="/activity"
+              >
+                View all
+              </UButton>
+            </div>
+          </template>
+          <UTable
+            :rows="[
+              {
+                id: 1,
+                action: 'Project Created',
+                project: 'Website Redesign',
+                date: '2 hours ago',
+              },
+              {
+                id: 2,
+                action: 'Task Completed',
+                project: 'Mobile App',
+                date: '4 hours ago',
+              },
+              {
+                id: 3,
+                action: 'Comment Added',
+                project: 'API Integration',
+                date: '1 day ago',
+              },
+            ]"
+            :columns="[
+              { id: 'action', key: 'action', label: 'Action' },
+              { id: 'project', key: 'project', label: 'Project' },
+              { id: 'date', key: 'date', label: 'Date' },
+            ]"
+          />
+        </UCard>
+      </div>
+    </UContainer>
+  </NuxtLayout>
 </template>
+
+<script setup lang="ts">
+definePageMeta({
+  middleware: ["auth"],
+});
+
+const user = useSupabaseUser();
+</script>
