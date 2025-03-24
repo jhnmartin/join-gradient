@@ -130,7 +130,7 @@ const signatureHtml = computed(() => {
                               }
                               ${
                                 userData?.calendly
-                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="24" width="24" alt="calendar" border="0" src="/icons/calendly.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="24" width="24" alt="calendar" border="0" src="https://api.iconify.design/simple-icons:calendly.svg" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
                                   : ""
                               }
                             </p>
