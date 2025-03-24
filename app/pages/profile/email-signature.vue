@@ -44,8 +44,6 @@ const signatureHtml = computed(() => {
                       </tbody>
                     </table>
                   </td>
-                  <td style="border-collapse: collapse; background-color: #21211d; width: 1px; vertical-align: super; padding: 0px !important; height: inherit;"></td>
-                  <td style="border-collapse: collapse; padding-right: 20px; width: inherit; height: inherit;"></td>
                   <td style="padding: 0px !important; width: inherit; height: inherit;">
                     <table border="0" cellpadding="0" cellspacing="0" style="font-family:Helvetica,Arial,sans-serif;line-height:0px;font-size:1px;padding:0px!important;border-spacing:0px;margin:0px;border-collapse:collapse;">
                       <tbody>
@@ -55,6 +53,11 @@ const signatureHtml = computed(() => {
                               <span style="font-family:Helvetica,Arial,sans-serif;font-size:17px;font-style:normal;line-height:19px;font-weight:700;color:#21211d;display:inline;">${
                                 userData?.full_name || ""
                               }</span>
+                              ${
+                                userData?.pronouns
+                                  ? `<span style="font-family:Helvetica,Arial,sans-serif;font-size:10px;font-style:normal;line-height:19px;font-weight:400;color:rgba(33,33,29,0.75);display:inline;margin-left:4px;">${userData.pronouns}</span>`
+                                  : ""
+                              }
                             </p>
                           </td>
                         </tr>
@@ -115,22 +118,22 @@ const signatureHtml = computed(() => {
                             <p style="margin: 0.04px;">
                               ${
                                 userData?.phone
-                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="22" width="22" alt="phone" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--phone-20-solid%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="phone" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons/heroicons--phone-20-solid%201.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.email
-                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="26" width="26" alt="email" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--envelope-16-solid%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="email" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--envelope-16-solid%201.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.linkedin
-                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="21" width="21" alt="linkedin" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//fa6-brands--linkedin%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="linkedin" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//fa6-brands--linkedin%201.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.calendly
-                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="24" width="24" alt="calendar" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//simple-icons--calendly%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="calendar" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//simple-icons--calendly%201.png"></a>`
                                   : ""
                               }
                             </p>

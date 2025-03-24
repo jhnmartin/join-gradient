@@ -30,14 +30,65 @@ const profile = reactive<Partial<ProfileSchema>>({
   bio: userData?.bio,
 });
 const toast = useToast();
+
 async function onSubmit(event: FormSubmitEvent<ProfileSchema>) {
-  toast.add({
-    title: "Success",
-    description: "Your settings have been updated.",
-    icon: "i-lucide-check",
-    color: "success",
-  });
-  console.log(event.data);
+  try {
+    // Upload avatar file if it's changed and is a File object
+    let avatar_url = profile.avatar;
+    if (fileRef.value?.files?.[0]) {
+      const file = fileRef.value.files[0];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${user.value?.id}/${fileName}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL for the uploaded file
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      avatar_url = publicUrl;
+    }
+
+    // Update profile in database
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        full_name: event.data.name,
+        email: event.data.email,
+        username: event.data.username,
+        avatar_url,
+        bio: event.data.bio,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.value?.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    toast.add({
+      title: "Success",
+      description: "Your settings have been updated.",
+      icon: "i-lucide-check",
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    toast.add({
+      title: "Error",
+      description: "Failed to update settings. Please try again.",
+      icon: "i-lucide-x",
+      color: "red",
+    });
+  }
 }
 
 function onFileChange(e: Event) {
