@@ -115,22 +115,22 @@ const signatureHtml = computed(() => {
                             <p style="margin: 0.04px;">
                               ${
                                 userData?.phone
-                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="22" width="22" alt="phone" border="0" src="/icons/phone.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="22" width="22" alt="phone" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--phone-20-solid%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
                                   : ""
                               }
                               ${
                                 userData?.email
-                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="26" width="26" alt="email" border="0" src="/icons/email.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="26" width="26" alt="email" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--envelope-16-solid%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
                                   : ""
                               }
                               ${
                                 userData?.linkedin
-                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="21" width="21" alt="linkedin" border="0" src="/icons/linkedin.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="21" width="21" alt="linkedin" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//fa6-brands--linkedin%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
                                   : ""
                               }
                               ${
                                 userData?.calendly
-                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="24" width="24" alt="calendar" border="0" src="https://api.iconify.design/simple-icons:calendly.svg" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
+                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="24" width="24" alt="calendar" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//simple-icons--calendly%201.png" style="filter: drop-shadow(0px 0px 1px #21211d);"></a>`
                                   : ""
                               }
                             </p>
