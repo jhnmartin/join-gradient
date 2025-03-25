@@ -40,7 +40,6 @@ const { data: profile, error } = await client
   .single();
 
 if (error) throw error;
-else console.log(profile);
 
 const handleLogout = async () => {
   try {

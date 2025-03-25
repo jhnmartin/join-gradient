@@ -10,6 +10,5 @@ useSeoMeta({
 </script>
 
 <template>
-  <ContentRenderer v-if="home" :value="home" />
-  <div v-else>Home not found</div>
+  <div>Docs</div>
 </template>

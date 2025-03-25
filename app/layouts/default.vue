@@ -20,13 +20,6 @@
           :class="{ 'flex-col': collapsed }"
         >
           <h1 class="text-xl font-display">team.gradient</h1>
-          <UButton
-            color="gray"
-            variant="ghost"
-            icon="i-lucide-menu"
-            class="lg:hidden"
-            @click="open = !open"
-          />
         </div>
       </template>
 
@@ -63,9 +56,6 @@
 
 <script setup lang="ts">
 const route = useRoute();
-const client = useSupabaseClient();
-const user = useSupabaseUser();
-const router = useRouter();
 const toast = useToast();
 
 const open = ref(false);
@@ -84,6 +74,14 @@ const links = [
       label: "Events",
       icon: "i-heroicons-outline-calendar",
       to: "/events",
+      onSelect: () => {
+        open.value = false;
+      },
+    },
+    {
+      label: "Members",
+      icon: "i-heroicons-outline-users",
+      to: "/members",
       onSelect: () => {
         open.value = false;
       },

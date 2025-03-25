@@ -1,3 +1,62 @@
+<script setup lang="ts">
+definePageMeta({
+  middleware: ["auth"],
+});
+
+const user = useSupabaseUser();
+const supabase = useSupabaseClient();
+
+const data = ref([]);
+const loading = ref(true);
+
+async function fetchMembers() {
+  try {
+    const { data: members, error } = await supabase
+      .from("members")
+      .select("*")
+      .order("start_date", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("Error fetching members:", error.message);
+      return;
+    }
+
+    data.value = members
+      ? members.map((member) => ({
+          name: member.name || "",
+          email: member.email || "",
+          plan: member.membership_plan || "",
+          startDate: member.start_date || "",
+        }))
+      : [];
+
+    console.log("Processed data:", data.value);
+  } catch (err) {
+    console.error("Error:", err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+await fetchMembers();
+
+const columns = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "email",
+    label: "Email",
+  },
+  {
+    key: "startDate",
+    label: "Start Date",
+  },
+];
+</script>
+
 <template>
   <UDashboardPanel>
     <template #header>
@@ -75,55 +134,30 @@
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                Recent Activity
+                Newest Members
               </h3>
               <UButton
                 color="gray"
                 variant="ghost"
                 icon="i-lucide-arrow-right"
-                to="/activity"
+                to="/members"
               >
                 View all
               </UButton>
             </div>
           </template>
-          <UTable
-            :rows="[
-              {
-                id: 1,
-                action: 'Project Created',
-                project: 'Website Redesign',
-                date: '2 hours ago',
-              },
-              {
-                id: 2,
-                action: 'Task Completed',
-                project: 'Mobile App',
-                date: '4 hours ago',
-              },
-              {
-                id: 3,
-                action: 'Comment Added',
-                project: 'API Integration',
-                date: '1 day ago',
-              },
-            ]"
-            :columns="[
-              { id: 'action', key: 'action', label: 'Action' },
-              { id: 'project', key: 'project', label: 'Project' },
-              { id: 'date', key: 'date', label: 'Date' },
-            ]"
-          />
+          <div v-if="loading" class="flex justify-center py-4">
+            <UIcon name="i-lucide-loader-2" class="w-6 h-6 animate-spin" />
+          </div>
+          <div
+            v-else-if="!data || data.length === 0"
+            class="text-center py-4 text-gray-500"
+          >
+            No members found
+          </div>
+          <UTable v-else :data="data" class="mt-2" />
         </UCard>
       </div>
     </template>
   </UDashboardPanel>
 </template>
-
-<script setup lang="ts">
-definePageMeta({
-  middleware: ["auth"],
-});
-
-const user = useSupabaseUser();
-</script>
