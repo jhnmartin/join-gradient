@@ -193,10 +193,27 @@ const copySignature = async () => {
     });
   }
 };
+
+const items = ref<AccordionItem[]>([
+  {
+    label: "Gmail on the web",
+    content: "You have nothing to do, @nuxt/icon will handle it automatically.",
+  },
+  {
+    label: "Gmail App",
+    content:
+      "Choose a primary and a neutral color from your Tailwind CSS theme.",
+  },
+  {
+    label: "Apple Mail",
+    content:
+      "You can customize components by using the `class` / `ui` props or in your app.config.ts.",
+  },
+]);
 </script>
 
 <template>
-  <div>
+  <div class="flex flex-col gap-4">
     <UPageCard
       title="Email Signature"
       description="Your email signature template"
@@ -217,6 +234,13 @@ const copySignature = async () => {
       <div class="p-4 bg-white rounded-lg">
         <div class="email-signature-template" v-html="signatureHtml" />
       </div>
+    </UPageCard>
+    <UPageCard
+      variant="subtle"
+      title="Instructions"
+      description="See Below for installation across different email services"
+    >
+      <UAccordion :items="items" />
     </UPageCard>
   </div>
 </template>
