@@ -118,22 +118,22 @@ const signatureHtml = computed(() => {
                             <p style="margin: 0.04px;">
                               ${
                                 userData?.phone
-                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="phone" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons/heroicons--phone-20-solid%201.png"></a>`
+                                  ? `<a href="tel:${userData.phone}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="phone" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--phone-20-solid%202.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.email
-                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="email" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--envelope-16-solid%201.png"></a>`
+                                  ? `<a href="mailto:${userData.email}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="email" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//heroicons--envelope-16-solid%202.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.linkedin
-                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="linkedin" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//fa6-brands--linkedin%201.png"></a>`
+                                  ? `<a href="${userData.linkedin}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="linkedin" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//fa6-brands--linkedin%202.png"></a>`
                                   : ""
                               }
                               ${
                                 userData?.calendly
-                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="calendar" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//simple-icons--calendly%201.png"></a>`
+                                  ? `<a href="${userData.calendly}" style="text-decoration: none; margin-right: 8px; display: inline-block;"><img height="20" width="20" alt="calendar" border="0" src="https://bwaibjmfdhfjkqjrrzoh.supabase.co/storage/v1/object/public/icons//simple-icons--calendly%202.png"></a>`
                                   : ""
                               }
                             </p>
@@ -214,7 +214,7 @@ const copySignature = async () => {
 
     <!-- Email Signature Template -->
     <UPageCard variant="subtle">
-      <div class="p-4">
+      <div class="p-4 bg-white rounded-lg">
         <div class="email-signature-template" v-html="signatureHtml" />
       </div>
     </UPageCard>

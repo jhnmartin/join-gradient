@@ -9,6 +9,14 @@ const supabase = useSupabaseClient();
 const data = ref([]);
 const loading = ref(true);
 
+const { data: profile, error } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.value.id)
+  .single();
+
+if (error) throw error;
+
 async function fetchMembers() {
   try {
     const { data: members, error } = await supabase
@@ -27,7 +35,13 @@ async function fetchMembers() {
           name: member.name || "",
           email: member.email || "",
           plan: member.membership_plan || "",
-          startDate: member.start_date || "",
+          startDate: new Date(member.start_date).toLocaleString("en-US", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }),
         }))
       : [];
 
@@ -40,21 +54,6 @@ async function fetchMembers() {
 }
 
 await fetchMembers();
-
-const columns = [
-  {
-    key: "name",
-    label: "Name",
-  },
-  {
-    key: "email",
-    label: "Email",
-  },
-  {
-    key: "startDate",
-    label: "Start Date",
-  },
-];
 </script>
 
 <template>
@@ -71,7 +70,7 @@ const columns = [
         <!-- Welcome Section -->
         <div>
           <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
-            Welcome back, {{ user?.email?.split("@")[0] }}!
+            Welcome back, {{ profile.full_name }}!
           </h2>
           <p class="mt-1 text-gray-600 dark:text-gray-400">
             Here's what's happening with your projects today.

@@ -2,7 +2,7 @@
 
 <template>
   <div>
-    <UDashboardNavbar title="Members">
+    <UDashboardNavbar title="Events">
       <template #leading>
         <UDashboardSidebarCollapse />
       </template>
@@ -10,5 +10,3 @@
     <NuxtPage />
   </div>
 </template>
-
-<style></style>

@@ -1,6 +1,10 @@
 <template>
   <div>
-    <p>Support</p>
+    <UDashboardNavbar title="Support">
+      <template #leading>
+        <UDashboardSidebarCollapse />
+      </template>
+    </UDashboardNavbar>
   </div>
 </template>
 

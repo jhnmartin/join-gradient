@@ -1,8 +1,6 @@
-<script lang="ts" setup></script>
-
 <template>
   <div>
-    <UDashboardNavbar title="Members">
+    <UDashboardNavbar title="Team">
       <template #leading>
         <UDashboardSidebarCollapse />
       </template>
@@ -10,5 +8,7 @@
     <NuxtPage />
   </div>
 </template>
+
+<script lang="ts" setup></script>
 
 <style></style>

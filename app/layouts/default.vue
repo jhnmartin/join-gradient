@@ -64,7 +64,7 @@ const links = [
   [
     {
       label: "Home",
-      icon: "i-heroicons-outline-home",
+      icon: "i-heroicons-home-20-solid",
       to: "/",
       onSelect: () => {
         open.value = false;
@@ -72,15 +72,23 @@ const links = [
     },
     {
       label: "Events",
-      icon: "i-heroicons-outline-calendar",
+      icon: "i-heroicons-calendar-20-solid",
       to: "/events",
       onSelect: () => {
         open.value = false;
       },
     },
     {
+      label: "Teams",
+      icon: "i-heroicons-users-20-solid",
+      to: "/teams",
+      onSelect: () => {
+        open.value = false;
+      },
+    },
+    {
       label: "Members",
-      icon: "i-heroicons-outline-users",
+      icon: "i-heroicons-user-group-20-solid",
       to: "/members",
       onSelect: () => {
         open.value = false;
@@ -92,13 +100,11 @@ const links = [
       label: "Documentation",
       icon: "i-lucide-book-open",
       to: "/docs",
-      target: "_blank",
     },
     {
       label: "Support",
       icon: "i-lucide-help-circle",
       to: "/support",
-      target: "_blank",
     },
   ],
 ];

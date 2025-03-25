@@ -1,16 +1,3 @@
-<template>
-  <div
-    class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 dark:bg-gray-900"
-  >
-    <UCard class="w-full max-w-md">
-      <UCardBody class="flex flex-col items-center space-y-4">
-        <UIcon name="i-lucide-loader-2" class="w-8 h-8 animate-spin" />
-        <p class="text-lg font-medium">Verifying your authentication...</p>
-      </UCardBody>
-    </UCard>
-  </div>
-</template>
-
 <script setup lang="ts">
 definePageMeta({
   layout: false,
@@ -51,3 +38,16 @@ onMounted(async () => {
   }
 });
 </script>
+
+<template>
+  <div
+    class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 dark:bg-gray-900"
+  >
+    <UCard class="w-full max-w-md">
+      <UCardBody class="flex flex-col items-center space-y-4">
+        <UIcon name="i-lucide-loader-2" class="w-8 h-8 animate-spin" />
+        <p class="text-lg font-medium">Verifying your authentication...</p>
+      </UCardBody>
+    </UCard>
+  </div>
+</template>
