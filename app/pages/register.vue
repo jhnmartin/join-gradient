@@ -140,6 +140,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     const { error } = await client.auth.signUp({
       email: event.data.email,
       password: event.data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/confirm`,
+      },
     });
 
     if (error) throw error;
