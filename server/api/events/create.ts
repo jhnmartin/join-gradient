@@ -15,21 +15,68 @@ export default defineEventHandler(async (event) => {
     
     console.log('Received webhook payload:', webhookPayload)
     
-    // Map webhook data to Webflow fields
-    // This is where you'll customize the mapping based on your webhook payload structure
+    // Function to convert local time to UTC
+    const convertToUTC = (date: string, time: string, timezone: string) => {
+      // Create a date string in the format expected by the Date constructor
+      const dateTimeStr = `${date}T${time}`;
+      // Create a date object - this will be interpreted in the local timezone
+      const localDate = new Date(dateTimeStr);
+      
+      // Format the date in the specified timezone
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      };
+      
+      // Get the date parts in the specified timezone
+      const formatter = new Intl.DateTimeFormat('en-US', options);
+      const parts = formatter.formatToParts(localDate);
+      
+      // Reconstruct the date in the correct timezone
+      const year = parts.find(p => p.type === 'year')?.value;
+      const month = parts.find(p => p.type === 'month')?.value;
+      const day = parts.find(p => p.type === 'day')?.value;
+      const hour = parts.find(p => p.type === 'hour')?.value;
+      const minute = parts.find(p => p.type === 'minute')?.value;
+      const second = parts.find(p => p.type === 'second')?.value;
+      
+      // Create a new date string in ISO format
+      const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+      
+      // Create a new date object from the ISO string
+      const dateInTimezone = new Date(isoDateStr);
+      
+      // Return the UTC ISO string
+      return dateInTimezone.toISOString();
+    };
+    
+    // Map Swoogo pillar values to Webflow pillar IDs
+    const pillarMapping: Record<string, string> = {
+      'Connect': '67ce5781f71b4b2d91c44df4',
+      'Scale': '67ce576fe8288f21bdeb494a',
+      'Start': '67ce5760f155bc0716caaecd'
+    }
+    
+    // Map Swoogo webhook data to Webflow fields
     const webflowFields = {
-      pillar: "",
+      pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "", // Map pillar value to ID
       "is-featured-event": false,
-      "ticket-price": webhookPayload.ticketPrice || "",
-      "rsvp-link": webhookPayload.rsvpLink || "",
-      "meeting-room": webhookPayload.meetingRoom || "",
-      shortdescription: webhookPayload.shortDescription || "",
-      location: webhookPayload.location || "",
-      "end-date-time": webhookPayload.endDateTime || "",
-      "start-date-time": webhookPayload.startDateTime || "",
-      image: webhookPayload.image || "",
-      name: webhookPayload.name,
-      slug: webhookPayload.slug || webhookPayload.name.toLowerCase().replace(/\s+/g, '-')
+      "ticket-price": "", // Will be updated later when handling paid events
+      "rsvp-link": `${webhookPayload.event.domain}/${webhookPayload.event.url}`, // Construct RSVP link with protocol and slash
+      "meeting-room": "", // Not provided in Swoogo payload
+      shortdescription: "", // Will be updated later when Swoogo field is added
+      location: webhookPayload.event.event_location_name || "", // Only use location name
+      "end-date-time": convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time, webhookPayload.event.timezone),
+      "start-date-time": convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time, webhookPayload.event.timezone),
+      image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
+      name: webhookPayload.event.name,
+      slug: webhookPayload.event.url // Using Swoogo's URL as the slug
     }
     
     // Validate required fields
@@ -50,9 +97,11 @@ export default defineEventHandler(async (event) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        isArchived: false,
-        isDraft: false,
-        fieldData: webflowFields
+        items: [{
+          isArchived: false,
+          isDraft: false,
+          fieldData: webflowFields
+        }]
       })
     })
     
