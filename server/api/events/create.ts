@@ -1,4 +1,5 @@
 import { defineEventHandler, readBody } from 'h3'
+import { serverSupabaseClient } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
   // Only allow POST requests
@@ -12,6 +13,7 @@ export default defineEventHandler(async (event) => {
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
+    const supabase = await serverSupabaseClient(event)
     
     console.log('Received webhook payload:', webhookPayload)
     
@@ -68,7 +70,7 @@ export default defineEventHandler(async (event) => {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "", // Map pillar value to ID
       "is-featured-event": false,
       "ticket-price": "", // Will be updated later when handling paid events
-      "rsvp-link": `${webhookPayload.event.domain}/${webhookPayload.event.url}`, // Domain already includes protocol
+      "rsvp-link": `${webhookPayload.event.domain}${webhookPayload.event.url}`, // Use domain directly
       "meeting-room": "", // Not provided in Swoogo payload
       shortdescription: "", // Will be updated later when Swoogo field is added
       location: webhookPayload.event.event_location_name || "", // Only use location name
@@ -113,6 +115,19 @@ export default defineEventHandler(async (event) => {
     
     const newItem = await response.json()
     console.log('Created new item:', newItem)
+
+    // Store the event in Supabase
+    const { error: supabaseError } = await supabase
+      .from('events')
+      .insert([{
+        swoogo_id: webhookPayload.event.id,
+        webflow_id: newItem.items[0].id
+      }])
+
+    if (supabaseError) {
+      console.error('Error storing event in Supabase:', supabaseError)
+      // Don't throw the error since the Webflow item was created successfully
+    }
     
     return {
       statusCode: 200,
