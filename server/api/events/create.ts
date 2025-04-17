@@ -15,45 +15,45 @@ export default defineEventHandler(async (event) => {
     
     console.log('Received webhook payload:', webhookPayload)
     
-    // Function to convert local time to UTC
-    const convertToUTC = (date: string, time: string, timezone: string) => {
-      // Create a date string in the format expected by the Date constructor
-      const dateTimeStr = `${date}T${time}`;
-      // Create a date object - this will be interpreted in the local timezone
-      const localDate = new Date(dateTimeStr);
-      
-      // Format the date in the specified timezone
-      const options: Intl.DateTimeFormatOptions = {
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      };
-      
-      // Get the date parts in the specified timezone
-      const formatter = new Intl.DateTimeFormat('en-US', options);
-      const parts = formatter.formatToParts(localDate);
-      
-      // Reconstruct the date in the correct timezone
-      const year = parts.find(p => p.type === 'year')?.value;
-      const month = parts.find(p => p.type === 'month')?.value;
-      const day = parts.find(p => p.type === 'day')?.value;
-      const hour = parts.find(p => p.type === 'hour')?.value;
-      const minute = parts.find(p => p.type === 'minute')?.value;
-      const second = parts.find(p => p.type === 'second')?.value;
-      
-      // Create a new date string in ISO format
-      const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-      
-      // Create a new date object from the ISO string
-      const dateInTimezone = new Date(isoDateStr);
-      
-      // Return the UTC ISO string
-      return dateInTimezone.toISOString();
+    // Function to convert Central time to UTC
+    const convertToUTC = (date: string, time: string) => {
+      try {
+        // Validate inputs
+        if (!date || !time) {
+          console.error('Missing required date/time fields:', { date, time });
+          return "";
+        }
+
+        console.log('Converting date/time:', { date, time });
+
+        // Create a date string in the format expected by the Date constructor
+        const dateTimeStr = `${date}T${time}`;
+        console.log('Created date string:', dateTimeStr);
+        
+        // Create a date object
+        const dateObj = new Date(dateTimeStr);
+        if (isNaN(dateObj.getTime())) {
+          console.error('Invalid date string:', dateTimeStr);
+          return "";
+        }
+
+        console.log('Initial date object:', dateObj.toISOString());
+
+        // Check if the date is during daylight savings time (March to November)
+        const month = dateObj.getMonth();
+        const isDST = month >= 2 && month <= 10; // March (2) to November (10)
+        console.log('Is DST:', isDST);
+        
+        // Add hours based on DST (5 hours during DST, 6 hours during standard time)
+        dateObj.setHours(dateObj.getHours() + (isDST ? 5 : 6));
+        
+        const result = dateObj.toISOString();
+        console.log('Final UTC date:', result);
+        return result;
+      } catch (error) {
+        console.error('Error converting date to UTC:', error);
+        return "";
+      }
     };
     
     // Map Swoogo pillar values to Webflow pillar IDs
@@ -68,15 +68,15 @@ export default defineEventHandler(async (event) => {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "", // Map pillar value to ID
       "is-featured-event": false,
       "ticket-price": "", // Will be updated later when handling paid events
-      "rsvp-link": `${webhookPayload.event.domain}/${webhookPayload.event.url}`, // Construct RSVP link with protocol and slash
+      "rsvp-link": `${webhookPayload.event.protocol}://${webhookPayload.event.domain}/${webhookPayload.event.url}`, // Construct RSVP link with protocol and slash
       "meeting-room": "", // Not provided in Swoogo payload
       shortdescription: "", // Will be updated later when Swoogo field is added
       location: webhookPayload.event.event_location_name || "", // Only use location name
-      "end-date-time": convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time, webhookPayload.event.timezone),
-      "start-date-time": convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time, webhookPayload.event.timezone),
+      "end-date-time": convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
+      "start-date-time": convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
       name: webhookPayload.event.name,
-      slug: webhookPayload.event.url // Using Swoogo's URL as the slug
+      slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-') // Clean up URL to make valid slug
     }
     
     // Validate required fields
