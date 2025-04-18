@@ -95,7 +95,7 @@ export default defineEventHandler(async (event) => {
     const response = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/live`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer d021eb5b4f008722f7f36d688ae0940d0f350f82b1686896f1ab986ca332d58c`,
+        'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
