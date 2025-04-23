@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "", // Map pillar value to ID
       "is-featured-event": false,
       "ticket-price": "", // Will be updated later when handling paid events
-      "rsvp-link": `${webhookPayload.event.domain}${webhookPayload.event.url}`, // Use domain directly
+      "rsvp-link": `${webhookPayload.event.domain}/${webhookPayload.event.url}`, // Use domain directly
       "meeting-room": "", // Not provided in Swoogo payload
       shortdescription: "", // Will be updated later when Swoogo field is added
       location: webhookPayload.event.event_location_name || "", // Only use location name
