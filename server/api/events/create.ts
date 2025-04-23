@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
     const supabase = await serverSupabaseServiceRole(event)
+    const officeId = "6602e576ef1d2a70ca915a07"
     
     console.log('Received webhook payload:', webhookPayload)
     
@@ -80,6 +81,18 @@ export default defineEventHandler(async (event) => {
       name: webhookPayload.event.name,
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-') // Clean up URL to make valid slug
     }
+
+    // Map Officernd fields
+    const officerndFields = {
+      title: webhookPayload.event.name,
+      office: officeId,
+      start: convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
+      end: convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
+      links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
+      image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
+      timezone: "America/Chicago",
+      description: ""
+    }
     
     // Validate required fields
     if (!webflowFields.name) {
@@ -116,32 +129,78 @@ export default defineEventHandler(async (event) => {
     const newItem = await response.json()
     console.log('Created new item:', newItem)
 
+    // Get OfficeRnD OAuth token
+    const optionsRnd = {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: 'Ypg8KlP1r6UiLbVE',
+        client_secret: '1StYNgPzxCbbQZnBvxw60qZcSDWhrpov',
+        grant_type: 'client_credentials',
+        scope: 'officernd.api.read officernd.api.write'
+      })
+    };
+
+    // Get OAuth token
+    const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
+    if (!tokenResponse.ok) {
+      console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
+      throw new Error('Failed to get OfficeRnD token');
+    }
+    const tokenData = await tokenResponse.json();
+
+    // Create event in OfficeRnD
+    const createEventResponse = await fetch('https://app.officernd.com/api/v1/organizations/gradient/events', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        authorization: `Bearer ${tokenData.access_token}`
+      },
+      body: JSON.stringify(officerndFields)
+    });
+
+    if (!createEventResponse.ok) {
+      console.error('Failed to create OfficeRnD event:', await createEventResponse.text());
+      throw new Error('Failed to create OfficeRnD event');
+    }
+
+    const officerndEvent = await createEventResponse.json();
+    console.log('Created OfficeRnD event:', officerndEvent);
+
     // Store the event in Supabase
     const { error: supabaseError } = await supabase
       .from('events')
       .insert([{
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
-        webflow_id: newItem.items[0].id
+        webflow_id: newItem.items[0].id,
+        officernd_id: officerndEvent.id  // Add OfficeRnD event ID
       }])
 
     if (supabaseError) {
       console.error('Error storing event in Supabase:', supabaseError)
-      // Don't throw the error since the Webflow item was created successfully
+      // Don't throw the error since the Webflow and OfficeRnD items were created successfully
     }
     
     return {
       statusCode: 200,
-      body: newItem
+      body: {
+        webflow: newItem,
+        officernd: officerndEvent
+      }
     }
   } catch (error) {
-    console.error('Webflow error:', error)
+    console.error('Error:', error)
     return {
       statusCode: 500,
       body: {
-        error: 'Failed to create Webflow item',
+        error: 'Failed to create event',
         details: error instanceof Error ? error.message : 'Unknown error'
       }
     }
   }
-}) 
+})
