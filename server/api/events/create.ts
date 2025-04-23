@@ -137,8 +137,8 @@ export default defineEventHandler(async (event) => {
         'content-type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
-        client_id: 'Ypg8KlP1r6UiLbVE',
-        client_secret: '1StYNgPzxCbbQZnBvxw60qZcSDWhrpov',
+        client_id: process.env.OFFICERND_CLIENT_ID || "",
+        client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
         grant_type: 'client_credentials',
         scope: 'officernd.api.read officernd.api.write'
       })
