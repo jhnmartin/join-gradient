@@ -120,6 +120,7 @@ export default defineEventHandler(async (event) => {
     const { error: supabaseError } = await supabase
       .from('events')
       .insert([{
+        name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id
       }])
