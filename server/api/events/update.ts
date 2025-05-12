@@ -2,8 +2,11 @@ import { defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
+  console.log('Update webhook received - Method:', event.method)
+  
   // Only allow PUT requests
   if (event.method !== 'PUT') {
+    console.log('Invalid method received:', event.method)
     return {
       statusCode: 405,
       body: 'Method Not Allowed'
@@ -12,11 +15,12 @@ export default defineEventHandler(async (event) => {
 
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
+    console.log('Reading webhook payload...')
     const webhookPayload = await readBody(event)
+    console.log('Webhook payload received:', JSON.stringify(webhookPayload, null, 2))
+    
     const supabase = await serverSupabaseServiceRole(event)
     const officeId = "6602e576ef1d2a70ca915a07"
-    
-    console.log('Received webhook payload:', webhookPayload)
     
     // Function to convert Central time to UTC
     const convertToUTC = (date: string, time: string) => {
@@ -66,6 +70,7 @@ export default defineEventHandler(async (event) => {
       'Start': '67ce5760f155bc0716caaecd'
     }
     
+    console.log('Querying Supabase for event with Swoogo ID:', webhookPayload.event.id)
     // Get the event from Supabase using the Swoogo ID
     const { data: eventData, error: supabaseError } = await supabase
       .from('events')
@@ -80,6 +85,8 @@ export default defineEventHandler(async (event) => {
         body: 'Event not found in database'
       }
     }
+    
+    console.log('Found event in Supabase:', JSON.stringify(eventData, null, 2))
 
     // Map Swoogo webhook data to Webflow fields
     const webflowFields = {
@@ -97,6 +104,8 @@ export default defineEventHandler(async (event) => {
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-')
     }
 
+    console.log('Prepared Webflow fields:', JSON.stringify(webflowFields, null, 2))
+
     // Map Officernd fields
     const officerndFields = {
       title: webhookPayload.event.name,
@@ -108,7 +117,10 @@ export default defineEventHandler(async (event) => {
       timezone: "America/Chicago",
       description: ""
     }
+
+    console.log('Prepared OfficeRnD fields:', JSON.stringify(officerndFields, null, 2))
     
+    console.log('Updating Webflow item:', eventData.webflow_id)
     // Update Webflow item
     const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${eventData.webflow_id}`, {
       method: 'PATCH',
@@ -130,8 +142,9 @@ export default defineEventHandler(async (event) => {
     }
     
     const updatedWebflowItem = await webflowResponse.json()
-    console.log('Updated Webflow item:', updatedWebflowItem)
+    console.log('Successfully updated Webflow item:', JSON.stringify(updatedWebflowItem, null, 2))
 
+    console.log('Getting OfficeRnD OAuth token...')
     // Get OfficeRnD OAuth token
     const optionsRnd = {
       method: 'POST',
@@ -154,7 +167,9 @@ export default defineEventHandler(async (event) => {
       throw new Error('Failed to get OfficeRnD token');
     }
     const tokenData = await tokenResponse.json();
+    console.log('Successfully obtained OfficeRnD token')
 
+    console.log('Updating OfficeRnD event:', eventData.officernd_id)
     // Update event in OfficeRnD
     const updateEventResponse = await fetch(`https://app.officernd.com/api/v1/organizations/gradient/events/${eventData.officernd_id}`, {
       method: 'PATCH',
@@ -172,8 +187,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const updatedOfficerndEvent = await updateEventResponse.json();
-    console.log('Updated OfficeRnD event:', updatedOfficerndEvent);
+    console.log('Successfully updated OfficeRnD event:', JSON.stringify(updatedOfficerndEvent, null, 2))
     
+    console.log('Update process completed successfully')
     return {
       statusCode: 200,
       body: {
@@ -182,7 +198,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in update process:', error)
     return {
       statusCode: 500,
       body: {
