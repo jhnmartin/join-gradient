@@ -170,13 +170,13 @@ export default defineEventHandler(async (event) => {
 
     const officerndEvent = await createEventResponse.json();
     console.log('Created OfficeRnD event:', officerndEvent);
-    console.log('OfficeRnD event ID:', officerndEvent.id);
+    console.log('OfficeRnD event ID:', officerndEvent._id);
 
     // Store the event in Supabase
     console.log('Storing event in Supabase with IDs:', {
       swoogo_id: webhookPayload.event.id,
       webflow_id: newItem.items[0].id,
-      officernd_id: officerndEvent.id
+      officernd_id: officerndEvent._id
     });
 
     const { error: supabaseError } = await supabase
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id,
-        officernd_id: officerndEvent.id
+        officernd_id: officerndEvent._id
       }])
 
     if (supabaseError) {
@@ -194,7 +194,7 @@ export default defineEventHandler(async (event) => {
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id,
-        officernd_id: officerndEvent.id
+        officernd_id: officerndEvent._id
       });
       // Don't throw the error since the Webflow and OfficeRnD items were created successfully
     } else {

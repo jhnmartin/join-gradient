@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
     
     console.log('Updating Webflow item:', eventData.webflow_id)
     // Update Webflow item
-    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${eventData.webflow_id}`, {
+    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/live/${eventData.webflow_id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
