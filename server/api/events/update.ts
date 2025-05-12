@@ -4,8 +4,8 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 export default defineEventHandler(async (event) => {
   console.log('Update webhook received - Method:', event.method)
   
-  // Only allow PUT requests
-  if (event.method !== 'PUT') {
+  // Only allow POST requests
+  if (event.method !== 'POST') {
     console.log('Invalid method received:', event.method)
     return {
       statusCode: 405,
