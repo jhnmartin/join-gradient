@@ -88,6 +88,17 @@ export default defineEventHandler(async (event) => {
     
     console.log('Found event in Supabase:', JSON.stringify(eventData, null, 2))
 
+    // Check if we have the required IDs
+    if (!eventData.webflow_id) {
+      console.error('Missing Webflow ID in Supabase record')
+      throw new Error('Missing Webflow ID in database record')
+    }
+
+    if (!eventData.officernd_id) {
+      console.error('Missing OfficeRnD ID in Supabase record')
+      throw new Error('Missing OfficeRnD ID in database record')
+    }
+
     // Map Swoogo webhook data to Webflow fields
     const webflowFields = {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "",
@@ -172,7 +183,7 @@ export default defineEventHandler(async (event) => {
     console.log('Updating OfficeRnD event:', eventData.officernd_id)
     // Update event in OfficeRnD
     const updateEventResponse = await fetch(`https://app.officernd.com/api/v1/organizations/gradient/events/${eventData.officernd_id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',

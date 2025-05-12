@@ -170,20 +170,35 @@ export default defineEventHandler(async (event) => {
 
     const officerndEvent = await createEventResponse.json();
     console.log('Created OfficeRnD event:', officerndEvent);
+    console.log('OfficeRnD event ID:', officerndEvent.id);
 
     // Store the event in Supabase
+    console.log('Storing event in Supabase with IDs:', {
+      swoogo_id: webhookPayload.event.id,
+      webflow_id: newItem.items[0].id,
+      officernd_id: officerndEvent.id
+    });
+
     const { error: supabaseError } = await supabase
       .from('events')
       .insert([{
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id,
-        officernd_id: officerndEvent.id  // Add OfficeRnD event ID
+        officernd_id: officerndEvent.id
       }])
 
     if (supabaseError) {
       console.error('Error storing event in Supabase:', supabaseError)
+      console.error('Failed to store event with data:', {
+        name: webhookPayload.event.name,
+        swoogo_id: webhookPayload.event.id,
+        webflow_id: newItem.items[0].id,
+        officernd_id: officerndEvent.id
+      });
       // Don't throw the error since the Webflow and OfficeRnD items were created successfully
+    } else {
+      console.log('Successfully stored event in Supabase');
     }
     
     return {
