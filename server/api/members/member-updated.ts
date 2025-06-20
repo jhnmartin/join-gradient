@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
         headers: {
           'accept': 'application/vnd.api+json',
           'revision': '2025-04-15',
-          'Authorization': `Su6CLk ${process.env.KLAVIYO_PRIVATE_KEY}`
+          'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_KEY}`
         }
       })
       
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
           'accept': 'application/vnd.api+json',
           'revision': '2025-04-15',
           'content-type': 'application/vnd.api+json',
-          'Authorization': `Su6CLk ${process.env.KLAVIYO_PRIVATE_KEY}`
+          'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_KEY}`
         },
         body: JSON.stringify({
           data: [{
