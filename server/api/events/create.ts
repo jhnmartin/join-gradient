@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
     const supabase = await serverSupabaseServiceRole(event)
-    const officeId = "6602e576ef1d2a70ca915a07"
+    // const officeId = "6602e576ef1d2a70ca915a07" // Will be used by separate OfficeRnD script
     
     console.log('Received webhook payload:', webhookPayload)
     
@@ -82,17 +82,18 @@ export default defineEventHandler(async (event) => {
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-') // Clean up URL to make valid slug
     }
 
+    // TODO: OfficeRnD fields will be used by separate script
     // Map Officernd fields
-    const officerndFields = {
-      title: webhookPayload.event.name,
-      office: officeId,
-      start: convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
-      end: convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
-      links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
-      image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
-      timezone: "America/Chicago",
-      description: ""
-    }
+    // const officerndFields = {
+    //   title: webhookPayload.event.name,
+    //   office: officeId,
+    //   start: convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
+    //   end: convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
+    //   links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
+    //   image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
+    //   timezone: "America/Chicago",
+    //   description: ""
+    // }
     
     // Validate required fields
     if (!webflowFields.name) {
@@ -104,8 +105,8 @@ export default defineEventHandler(async (event) => {
     
     console.log('Creating Webflow item with mapped data:', webflowFields)
     
-    // Create the new item with mapped fields
-    const response = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/live`, {
+    // Create the new item with mapped fields (as draft)
+    const response = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
@@ -114,7 +115,7 @@ export default defineEventHandler(async (event) => {
       body: JSON.stringify({
         items: [{
           isArchived: false,
-          isDraft: false,
+          isDraft: true,
           fieldData: webflowFields
         }]
       })
@@ -129,54 +130,54 @@ export default defineEventHandler(async (event) => {
     const newItem = await response.json()
     console.log('Created new item:', newItem)
 
+    // TODO: OfficeRnD creation will be handled by separate script when Webflow item goes live
     // Get OfficeRnD OAuth token
-    const optionsRnd = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        client_id: process.env.OFFICERND_CLIENT_ID || "",
-        client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
-        grant_type: 'client_credentials',
-        scope: 'officernd.api.read officernd.api.write'
-      })
-    };
+    // const optionsRnd = {
+    //   method: 'POST',
+    //   headers: {
+    //     accept: 'application/json',
+    //     'content-type': 'application/x-www-form-urlencoded'
+    //   },
+    //   body: new URLSearchParams({
+    //     client_id: process.env.OFFICERND_CLIENT_ID || "",
+    //     client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
+    //     grant_type: 'client_credentials',
+    //     scope: 'officernd.api.read officernd.api.write'
+    //   })
+    // };
 
-    // Get OAuth token
-    const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
-    if (!tokenResponse.ok) {
-      console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
-      throw new Error('Failed to get OfficeRnD token');
-    }
-    const tokenData = await tokenResponse.json();
+    // // Get OAuth token
+    // const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
+    // if (!tokenResponse.ok) {
+    //   console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
+    //   throw new Error('Failed to get OfficeRnD token');
+    // }
+    // const tokenData = await tokenResponse.json();
 
-    // Create event in OfficeRnD
-    const createEventResponse = await fetch('https://app.officernd.com/api/v1/organizations/gradient/events', {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        authorization: `Bearer ${tokenData.access_token}`
-      },
-      body: JSON.stringify(officerndFields)
-    });
+    // // Create event in OfficeRnD
+    // const createEventResponse = await fetch('https://app.officernd.com/api/v1/organizations/gradient/events', {
+    //   method: 'POST',
+    //   headers: {
+    //     accept: 'application/json',
+    //     'content-type': 'application/json',
+    //     authorization: `Bearer ${tokenData.access_token}`
+    //   },
+    //   body: JSON.stringify(officerndFields)
+    // });
 
-    if (!createEventResponse.ok) {
-      console.error('Failed to create OfficeRnD event:', await createEventResponse.text());
-      throw new Error('Failed to create OfficeRnD event');
-    }
+    // if (!createEventResponse.ok) {
+    //   console.error('Failed to create OfficeRnD event:', await createEventResponse.text());
+    //   throw new Error('Failed to create OfficeRnD event');
+    // }
 
-    const officerndEvent = await createEventResponse.json();
-    console.log('Created OfficeRnD event:', officerndEvent);
-    console.log('OfficeRnD event ID:', officerndEvent._id);
+    // const officerndEvent = await createEventResponse.json();
+    // console.log('Created OfficeRnD event:', officerndEvent);
+    // console.log('OfficeRnD event ID:', officerndEvent._id);
 
-    // Store the event in Supabase
+    // Store the event in Supabase (without OfficeRnD ID for now)
     console.log('Storing event in Supabase with IDs:', {
       swoogo_id: webhookPayload.event.id,
-      webflow_id: newItem.items[0].id,
-      officernd_id: officerndEvent._id
+      webflow_id: newItem.items[0].id
     });
 
     const { error: supabaseError } = await supabase
@@ -185,7 +186,7 @@ export default defineEventHandler(async (event) => {
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id,
-        officernd_id: officerndEvent._id
+        officernd_id: null // Will be populated by separate script when Webflow goes live
       }])
 
     if (supabaseError) {
@@ -194,9 +195,9 @@ export default defineEventHandler(async (event) => {
         name: webhookPayload.event.name,
         swoogo_id: webhookPayload.event.id,
         webflow_id: newItem.items[0].id,
-        officernd_id: officerndEvent._id
+        officernd_id: null
       });
-      // Don't throw the error since the Webflow and OfficeRnD items were created successfully
+      // Don't throw the error since the Webflow item was created successfully
     } else {
       console.log('Successfully stored event in Supabase');
     }
@@ -205,7 +206,7 @@ export default defineEventHandler(async (event) => {
       statusCode: 200,
       body: {
         webflow: newItem,
-        officernd: officerndEvent
+        message: 'Event created as draft in Webflow. OfficeRnD creation will happen when published.'
       }
     }
   } catch (error) {
