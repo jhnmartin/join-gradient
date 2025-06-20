@@ -24,6 +24,8 @@ try {
   }
   
   console.log('Adding member email to Klaviyo list:', memberEmail)
+  console.log('Klaviyo API Key exists:', !!process.env.KLAVIYO_PRIVATE_API_KEY)
+  console.log('Klaviyo API Key length:', process.env.KLAVIYO_PRIVATE_API_KEY?.length)
   
   // Add member to Klaviyo using the latest API
   const klaviyoResponse = await fetch('https://a.klaviyo.com/api/profile-import', {
@@ -32,7 +34,7 @@ try {
       'accept': 'application/vnd.api+json',
       'revision': '2025-04-15',
       'content-type': 'application/vnd.api+json',
-      'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_KEY}`
+      'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_API_KEY}`
     },
           body: JSON.stringify({
         data: {
@@ -94,7 +96,7 @@ try {
       'accept': 'application/vnd.api+json',
       'revision': '2025-04-15',
       'content-type': 'application/vnd.api+json',
-      'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_KEY}`
+      'Authorization': `Klaviyo-API-Key ${process.env.KLAVIYO_PRIVATE_API_KEY}`
     },
     body: JSON.stringify({
       data: [{
