@@ -19,7 +19,13 @@
           class="flex items-center justify-between p-2"
           :class="{ 'flex-col': collapsed }"
         >
-          <h1 class="text-xl font-display">team.gradient</h1>
+          <img
+            v-if="collapsed"
+            src="/favicon.ico"
+            alt="team.gradient"
+            class="h-auto w-auto"
+          />
+          <h1 v-else class="text-xl font-display">team.gradient</h1>
         </div>
       </template>
 
@@ -146,7 +152,7 @@ onMounted(async () => {
       },
       {
         label: "Decline",
-        color: "gray",
+        color: "neutral",
         variant: "ghost",
       },
     ],
