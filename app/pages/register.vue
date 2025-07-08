@@ -1,38 +1,3 @@
-<template>
-  <div
-    class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 dark:bg-gray-900"
-  >
-    <UPageCard class="w-full max-w-md">
-      <UAuthForm
-        :schema="schema"
-        title="Create an account"
-        description="Sign up to get started with your new account."
-        icon="i-lucide-user-plus"
-        :fields="fields"
-        :providers="providers"
-        :loading="loading"
-        @submit="onSubmit"
-      >
-        <template #footer>
-          <div
-            class="flex flex-col items-center gap-4 text-sm text-gray-600 dark:text-gray-400"
-          >
-            <div>
-              Already have an account?
-              <NuxtLink
-                to="/login"
-                class="text-primary-500 hover:text-primary-600"
-              >
-                Sign in
-              </NuxtLink>
-            </div>
-          </div>
-        </template>
-      </UAuthForm>
-    </UPageCard>
-  </div>
-</template>
-
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent } from "@nuxt/ui";
@@ -90,7 +55,7 @@ const providers = [
             error instanceof Error
               ? error.message
               : "Failed to sign up with Google",
-          color: "red",
+          color: "error",
         });
       }
     },
@@ -114,16 +79,26 @@ const providers = [
             error instanceof Error
               ? error.message
               : "Failed to sign up with GitHub",
-          color: "red",
+          color: "error",
         });
       }
     },
   },
 ];
 
+const allowedDomains = ["@joingradient.com", "@smithandgrain.com"];
+
 const schema = z
   .object({
-    email: z.string().email("Invalid email"),
+    email: z
+      .string()
+      .email("Invalid email")
+      .refine(
+        (email) => allowedDomains.some((domain) => email.endsWith(domain)),
+        {
+          message: "Email must be from @joingradient.com or @smithandgrain.com",
+        }
+      ),
     password: z.string().min(8, "Must be at least 8 characters"),
     confirmPassword: z.string(),
   })
@@ -150,17 +125,52 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     toast.add({
       title: "Success",
       description: "Please check your email to confirm your account",
-      color: "green",
+      color: "success",
     });
     await router.push("/login");
   } catch (error: unknown) {
     toast.add({
       title: "Error",
       description: error instanceof Error ? error.message : "Failed to sign up",
-      color: "red",
+      color: "error",
     });
   } finally {
     loading.value = false;
   }
 }
 </script>
+
+<template>
+  <div
+    class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50 dark:bg-gray-900"
+  >
+    <UPageCard class="w-full max-w-md">
+      <UAuthForm
+        :schema="schema"
+        title="Create an account"
+        description="Sign up to get started with your new account."
+        icon="i-lucide-user-plus"
+        :fields="fields"
+        :providers="providers"
+        :loading="loading"
+        @submit="onSubmit as any"
+      >
+        <template #footer>
+          <div
+            class="flex flex-col items-center gap-4 text-sm text-gray-600 dark:text-gray-400"
+          >
+            <div>
+              Already have an account?
+              <NuxtLink
+                to="/login"
+                class="text-primary-500 hover:text-primary-600"
+              >
+                Sign in
+              </NuxtLink>
+            </div>
+          </div>
+        </template>
+      </UAuthForm>
+    </UPageCard>
+  </div>
+</template>
