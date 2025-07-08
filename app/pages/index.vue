@@ -2,9 +2,6 @@
 const user = useSupabaseUser();
 const supabase = useSupabaseClient();
 
-const data = ref([]);
-const loading = ref(true);
-
 const { data: profile, error } = await supabase
   .from("profiles")
   .select("*")
@@ -12,44 +9,6 @@ const { data: profile, error } = await supabase
   .single();
 
 if (error) throw error;
-
-async function fetchMembers() {
-  try {
-    const { data: members, error } = await supabase
-      .from("members")
-      .select("*")
-      .order("start_date", { ascending: false })
-      .limit(20);
-
-    if (error) {
-      console.error("Error fetching members:", error.message);
-      return;
-    }
-
-    data.value = members
-      ? members.map((member) => ({
-          name: member.name || "",
-          email: member.email || "",
-          plan: member.membership_plan || "",
-          startDate: new Date(member.start_date).toLocaleString("en-US", {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          }),
-        }))
-      : [];
-
-    console.log("Processed data:", data.value);
-  } catch (err) {
-    console.error("Error:", err);
-  } finally {
-    loading.value = false;
-  }
-}
-
-await fetchMembers();
 </script>
 
 <template>
@@ -123,35 +82,7 @@ await fetchMembers();
             <p class="text-2xl font-semibold">8</p>
           </UCard>
         </div>
-
-        <!-- Recent Activity -->
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                Newest Members
-              </h3>
-              <UButton
-                color="gray"
-                variant="ghost"
-                icon="i-lucide-arrow-right"
-                to="/members"
-              >
-                View all
-              </UButton>
-            </div>
-          </template>
-          <div v-if="loading" class="flex justify-center py-4">
-            <UIcon name="i-lucide-loader-2" class="w-6 h-6 animate-spin" />
-          </div>
-          <div
-            v-else-if="!data || data.length === 0"
-            class="text-center py-4 text-gray-500"
-          >
-            No members found
-          </div>
-          <UTable v-else :data="data" class="mt-2" />
-        </UCard>
+        <HomeMemberLeads />
       </div>
     </template>
   </UDashboardPanel>
