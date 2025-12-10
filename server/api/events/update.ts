@@ -24,6 +24,55 @@ export default defineEventHandler(async (event) => {
       }
     }
     
+    // Function to convert Central time to UTC
+    const convertToUTC = (date: string | null, time: string | null) => {
+      try {
+        if (!date || !time) {
+          return null;
+        }
+
+        const dateTimeStr = `${date}T${time}`;
+        const dateObj = new Date(dateTimeStr);
+        
+        if (isNaN(dateObj.getTime())) {
+          console.error('Invalid date string:', dateTimeStr);
+          return null;
+        }
+
+        // Check if the date is during daylight savings time (March to November)
+        const month = dateObj.getMonth();
+        const isDST = month >= 2 && month <= 10; // March (2) to November (10)
+        
+        // Add hours based on DST (5 hours during DST, 6 hours during standard time)
+        dateObj.setHours(dateObj.getHours() + (isDST ? 5 : 6));
+        
+        return dateObj.toISOString();
+      } catch (error) {
+        console.error('Error converting date to UTC:', error);
+        return null;
+      }
+    };
+
+    // Helper function to calculate end time (2 hours after start)
+    const calculateEndTime = (startDate: string, startTime: string) => {
+      const startUTC = convertToUTC(startDate, startTime);
+      if (!startUTC) return null;
+      
+      const endDate = new Date(startUTC);
+      endDate.setHours(endDate.getHours() + 2); // 2 hour duration
+      return endDate.toISOString();
+    };
+
+    // Get start and end dates/times
+    const startDate = webhookPayload.event.start_date;
+    const startTime = webhookPayload.event.start_time;
+    const endDate = webhookPayload.event.end_date;
+    const endTime = webhookPayload.event.end_time;
+
+    // Convert dates for Webflow
+    const webflowStartDateTime = convertToUTC(startDate, startTime) || "";
+    const webflowEndDateTime = convertToUTC(endDate, endTime) || calculateEndTime(startDate, startTime) || "";
+    
     // Find Webflow item by Swoogo ID
     console.log('Searching for Webflow item with Swoogo ID:', swoogoId)
     
@@ -77,8 +126,8 @@ export default defineEventHandler(async (event) => {
       "meeting-room": "",
       shortdescription: "",
       location: webhookPayload.event.event_location_name || "",
-      "end-date": "", // Will be handled later
-      "start-date": "", // Will be handled later
+      "end-date-time": webflowEndDateTime,
+      "start-date-time": webflowStartDateTime,
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "",
       name: webhookPayload.event.name,
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-'),
