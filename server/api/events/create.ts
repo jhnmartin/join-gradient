@@ -145,7 +145,7 @@ export default defineEventHandler(async (event) => {
     console.log('Creating Webflow item with mapped data:', webflowFields)
     
     // Create the new item with mapped fields (as draft)
-    const response = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/live`, {
+    const response = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
