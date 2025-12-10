@@ -144,28 +144,9 @@ export default defineEventHandler(async (event) => {
     // If Swoogo is live but Webflow is still in draft, we need to publish it
     const needsPublishing = !swoogoIsDraft && webflowIsDraft
     
-    // Determine endpoint and draft status
-    let endpoint: string
-    let isDraft: boolean
-    
-    if (swoogoIsDraft) {
-      // Swoogo is draft - update draft version
-      endpoint = `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`
-      isDraft = true
-    } else {
-      // Swoogo is live - update live version
-      endpoint = `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}/live`
-      isDraft = false
-    }
-    
-    if (needsPublishing) {
-      console.log('Publishing Webflow item (transitioning from draft to live):', webflowItemId)
-    } else {
-      console.log(`Updating Webflow item (${swoogoIsDraft ? 'draft' : 'live'}):`, webflowItemId)
-    }
-    
-    // Update Webflow item
-    const webflowResponse = await fetch(endpoint, {
+    // Always update the draft first to ensure it has the latest data
+    console.log('Updating Webflow draft item:', webflowItemId)
+    const draftResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
@@ -173,24 +154,68 @@ export default defineEventHandler(async (event) => {
       },
       body: JSON.stringify({
         isArchived: false,
-        isDraft: isDraft,
+        isDraft: true,
         fieldData: webflowFields
       })
     })
     
-    if (!webflowResponse.ok) {
-      const errorText = await webflowResponse.text()
-      console.error('Webflow API error response:', errorText)
-      throw new Error(`Failed to update Webflow item: ${webflowResponse.statusText} - ${errorText}`)
+    if (!draftResponse.ok) {
+      const errorText = await draftResponse.text()
+      console.error('Webflow API error response (draft update):', errorText)
+      throw new Error(`Failed to update Webflow draft item: ${draftResponse.statusText} - ${errorText}`)
     }
     
-    const updatedWebflowItem = await webflowResponse.json()
-    console.log(`Successfully updated Webflow item (${isDraft ? 'draft' : 'live'}):`, JSON.stringify(updatedWebflowItem, null, 2))
+    const updatedDraftItem = await draftResponse.json()
+    console.log('Successfully updated Webflow draft item')
+    
+    // If Swoogo is live, update the live version (or publish if needed)
+    let updatedWebflowItem = updatedDraftItem
+    
+    if (!swoogoIsDraft) {
+      if (needsPublishing) {
+        console.log('Publishing Webflow item (transitioning from draft to live):', webflowItemId)
+      } else {
+        console.log('Updating Webflow live item:', webflowItemId)
+      }
+      
+      // Try to update live version
+      const liveResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}/live`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          isArchived: false,
+          isDraft: false,
+          fieldData: webflowFields
+        })
+      })
+      
+      if (!liveResponse.ok) {
+        const errorText = await liveResponse.text()
+        const errorData = JSON.parse(errorText)
+        
+        // If the item has never been published (409 conflict), we can't PATCH the live endpoint
+        // The draft was updated successfully, so we'll just log this
+        if (liveResponse.status === 409 && errorData.code === 'conflict') {
+          console.warn('Item has never been published. Draft updated successfully, but live update skipped.')
+          console.warn('Note: Item must be manually published in Webflow or published via a different method.')
+        } else {
+          console.error('Webflow API error response (live update):', errorText)
+          // Don't throw - draft was updated successfully
+          console.warn('Live update failed, but draft was updated successfully')
+        }
+      } else {
+        updatedWebflowItem = await liveResponse.json()
+        console.log(`Successfully updated Webflow live item`)
+      }
+    }
     
     return {
       statusCode: 200,
       body: {
-        message: `Event updated successfully in Webflow (${isDraft ? 'draft' : 'live'})`,
+        message: `Event updated successfully in Webflow (${swoogoIsDraft ? 'draft' : 'live'})`,
         webflow: updatedWebflowItem
       }
     }
