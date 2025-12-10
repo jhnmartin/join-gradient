@@ -1,5 +1,4 @@
 import { defineEventHandler, readBody } from 'h3'
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
   // Only allow POST requests
@@ -13,8 +12,7 @@ export default defineEventHandler(async (event) => {
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
-    const supabase = await serverSupabaseServiceRole(event)
-    // const officeId = "6602e576ef1d2a70ca915a07" // Will be used by separate OfficeRnD script
+    const officeId = "6602e576ef1d2a70ca915a07"
     
     console.log('Received webhook payload:', webhookPayload)
     
@@ -173,40 +171,13 @@ export default defineEventHandler(async (event) => {
     const officerndEvent = await createEventResponse.json();
     console.log('Created OfficeRnD event:', officerndEvent);
     console.log('OfficeRnD event ID:', officerndEvent._id);
-
-    // Store the event in Supabase (without OfficeRnD ID for now)
-    console.log('Storing event in Supabase with IDs:', {
-      swoogo_id: webhookPayload.event.id,
-      webflow_id: newItem.items[0].id
-    });
-
-    const { error: supabaseError } = await supabase
-      .from('events')
-      .insert([{
-        name: webhookPayload.event.name,
-        swoogo_id: webhookPayload.event.id,
-        webflow_id: newItem.items[0].id,
-        officernd_id: null // Will be populated by separate script when Webflow goes live
-      }])
-
-    if (supabaseError) {
-      console.error('Error storing event in Supabase:', supabaseError)
-      console.error('Failed to store event with data:', {
-        name: webhookPayload.event.name,
-        swoogo_id: webhookPayload.event.id,
-        webflow_id: newItem.items[0].id,
-        officernd_id: null
-      });
-      // Don't throw the error since the Webflow item was created successfully
-    } else {
-      console.log('Successfully stored event in Supabase');
-    }
     
     return {
       statusCode: 200,
       body: {
         webflow: newItem,
-        message: 'Event created as draft in Webflow. OfficeRnD creation will happen when published.'
+        officernd: officerndEvent,
+        message: 'Event created successfully in Webflow and OfficeRnD'
       }
     }
   } catch (error) {
