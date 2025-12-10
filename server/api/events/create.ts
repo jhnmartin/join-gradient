@@ -171,35 +171,32 @@ export default defineEventHandler(async (event) => {
         
         console.log('Prepared OfficeRnD fields:', JSON.stringify(officerndFields, null, 2))
         
-        // Get OfficeRnD OAuth token
+        // Get OfficeRnD OAuth token with v2 scopes
         const encodedParams = new URLSearchParams();
-encodedParams.set('client_id', 'process.env.OFFICERND_CLIENT_ID');
-encodedParams.set('client_secret', 'process.env.OFFICERND_CLIENT_SECRET');
-encodedParams.set('grant_type', 'client_credentials');
-encodedParams.set('scope', 'flex.collaboration.events.read flex.collaboration.events.create flex.collaboration.events.update flex.collaboration.events.delete');
+        encodedParams.set('client_id', process.env.OFFICERND_CLIENT_ID || "");
+        encodedParams.set('client_secret', process.env.OFFICERND_CLIENT_SECRET || "");
+        encodedParams.set('grant_type', 'client_credentials');
+        encodedParams.set('scope', 'flex.collaboration.events.read flex.collaboration.events.create flex.collaboration.events.update flex.collaboration.events.delete');
 
-const url = 'https://identity.officernd.com/oauth/token';
-const options = {
-  method: 'POST',
-  headers: {
-    accept: 'application/json',
-    'content-type': 'application/x-www-form-urlencoded'
-  },
-  body: encodedParams
-};
-
-fetch(url, options)
-  .then(res => res.json())
-  .then(json => console.log(json))
-  .catch(err => console.error(err));
+        const optionsRnd = {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/x-www-form-urlencoded'
+          },
+          body: encodedParams
+        };
 
         // Get OAuth token
         const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
         if (!tokenResponse.ok) {
-          console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
-          throw new Error('Failed to get OfficeRnD token');
+          const errorText = await tokenResponse.text();
+          console.error('Failed to get OfficeRnD token. Status:', tokenResponse.status);
+          console.error('Error response:', errorText);
+          throw new Error(`Failed to get OfficeRnD token: ${tokenResponse.status} - ${errorText}`);
         }
         const tokenData = await tokenResponse.json();
+        console.log('Successfully obtained OfficeRnD token');
 
         // Create event in OfficeRnD
         const createEventResponse = await fetch('https://app.officernd.com/api/v2/organizations/gradient/events', {
