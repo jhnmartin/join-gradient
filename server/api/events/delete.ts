@@ -1,5 +1,4 @@
 import { defineEventHandler, readBody } from 'h3'
-import { serverSupabaseServiceRole } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
   // Only allow DELETE requests
@@ -13,27 +12,58 @@ export default defineEventHandler(async (event) => {
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
-    const supabase = await serverSupabaseServiceRole(event)
     
-    console.log('Received webhook payload:', webhookPayload)
+    console.log('Received webhook payload:', JSON.stringify(webhookPayload, null, 2))
     
-    // Get the event from Supabase using the Swoogo ID
-    const { data: eventData, error: supabaseError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('swoogo_id', webhookPayload.event.id)
-      .single()
-
-    if (supabaseError || !eventData) {
-      console.error('Error fetching event from Supabase:', supabaseError)
+    const swoogoId = webhookPayload.event.id?.toString() || "";
+    
+    if (!swoogoId) {
       return {
-        statusCode: 404,
-        body: 'Event not found in database'
+        statusCode: 400,
+        body: 'Swoogo ID is required in the webhook payload'
       }
     }
     
+    // Find Webflow item by Swoogo ID
+    console.log('Searching for Webflow item with Swoogo ID:', swoogoId)
+    
+    // Search Webflow collection for item with matching swoogo field
+    const searchResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items?filter=${encodeURIComponent(JSON.stringify({ field: "swoogo", operator: "equals", value: swoogoId }))}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text()
+      console.error('Failed to search Webflow collection:', errorText)
+      return {
+        statusCode: 404,
+        body: 'Event not found in Webflow collection'
+      }
+    }
+
+    const searchResults = await searchResponse.json()
+    console.log('Webflow search results:', JSON.stringify(searchResults, null, 2))
+
+    if (!searchResults.items || searchResults.items.length === 0) {
+      return {
+        statusCode: 404,
+        body: 'Event not found in Webflow collection'
+      }
+    }
+
+    const webflowItem = searchResults.items[0]
+    const webflowItemId = webflowItem.id
+    const rndId = webflowItem.fieldData?.rnd || ""
+
+    console.log('Found Webflow item:', webflowItemId)
+    console.log('OfficeRnD ID from Webflow:', rndId)
+    
     // Delete Webflow item
-    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${eventData.webflow_id}`, {
+    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
@@ -47,65 +77,72 @@ export default defineEventHandler(async (event) => {
       throw new Error(`Failed to delete Webflow item: ${webflowResponse.statusText} - ${errorText}`)
     }
     
-    console.log('Deleted Webflow item:', eventData.webflow_id)
+    console.log('Deleted Webflow item:', webflowItemId)
 
-    // Get OfficeRnD OAuth token
-    const optionsRnd = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        client_id: process.env.OFFICERND_CLIENT_ID || "",
-        client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
-        grant_type: 'client_credentials',
-        scope: 'officernd.api.read officernd.api.write'
-      })
-    };
+    // Delete OfficeRnD event if we have the RND ID
+    if (rndId) {
+      try {
+        console.log('Getting OfficeRnD OAuth token...')
+        // Get OfficeRnD OAuth token with v2 scopes
+        const encodedParams = new URLSearchParams();
+        encodedParams.set('client_id', process.env.OFFICERND_CLIENT_ID || "");
+        encodedParams.set('client_secret', process.env.OFFICERND_CLIENT_SECRET || "");
+        encodedParams.set('grant_type', 'client_credentials');
+        encodedParams.set('scope', 'flex.collaboration.events.read flex.collaboration.events.create flex.collaboration.events.update flex.collaboration.events.delete');
 
-    // Get OAuth token
-    const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
-    if (!tokenResponse.ok) {
-      console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
-      throw new Error('Failed to get OfficeRnD token');
-    }
-    const tokenData = await tokenResponse.json();
+        const optionsRnd = {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/x-www-form-urlencoded'
+          },
+          body: encodedParams
+        };
 
-    // Delete event in OfficeRnD
-    const deleteEventResponse = await fetch(`https://app.officernd.com/api/v1/organizations/gradient/events/${eventData.officernd_id}`, {
-      method: 'DELETE',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        authorization: `Bearer ${tokenData.access_token}`
+        // Get OAuth token
+        const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
+        if (!tokenResponse.ok) {
+          const errorText = await tokenResponse.text();
+          console.error('Failed to get OfficeRnD token. Status:', tokenResponse.status);
+          console.error('Error response:', errorText);
+          throw new Error(`Failed to get OfficeRnD token: ${tokenResponse.status} - ${errorText}`);
+        }
+        const tokenData = await tokenResponse.json();
+        console.log('Successfully obtained OfficeRnD token')
+
+        // Delete event in OfficeRnD v2 API
+        console.log('Deleting OfficeRnD event:', rndId)
+        const deleteEventResponse = await fetch(`https://app.officernd.com/api/v2/organizations/gradient/events/${rndId}`, {
+          method: 'DELETE',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            authorization: `Bearer ${tokenData.access_token}`
+          }
+        });
+
+        if (!deleteEventResponse.ok) {
+          const errorText = await deleteEventResponse.text();
+          console.error('Failed to delete OfficeRnD event. Status:', deleteEventResponse.status);
+          console.error('Error response:', errorText);
+          throw new Error(`Failed to delete OfficeRnD event: ${deleteEventResponse.status} - ${errorText}`);
+        }
+
+        console.log('Deleted OfficeRnD event:', rndId);
+      } catch (officerndError) {
+        // Log error but don't fail the entire request - Webflow was deleted successfully
+        console.error('OfficeRnD event deletion failed (non-blocking):', officerndError);
       }
-    });
-
-    if (!deleteEventResponse.ok) {
-      console.error('Failed to delete OfficeRnD event:', await deleteEventResponse.text());
-      throw new Error('Failed to delete OfficeRnD event');
-    }
-
-    console.log('Deleted OfficeRnD event:', eventData.officernd_id);
-
-    // Delete the event from Supabase
-    const { error: deleteSupabaseError } = await supabase
-      .from('events')
-      .delete()
-      .eq('swoogo_id', webhookPayload.event.id);
-
-    if (deleteSupabaseError) {
-      console.error('Error deleting event from Supabase:', deleteSupabaseError);
-      throw new Error('Failed to delete event from Supabase');
+    } else {
+      console.warn('No OfficeRnD ID found in Webflow item, skipping OfficeRnD deletion')
     }
     
     return {
       statusCode: 200,
       body: {
         message: 'Event deleted successfully',
-        webflow_id: eventData.webflow_id,
-        officernd_id: eventData.officernd_id
+        webflow_id: webflowItemId,
+        officernd_id: rndId || null
       }
     }
   } catch (error) {
