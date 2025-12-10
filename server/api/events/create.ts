@@ -12,17 +12,17 @@ export default defineEventHandler(async (event) => {
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
-    // const officeId = "6602e576ef1d2a70ca915a07" // OfficeRnD - commented out
+    const officeId = "6602e576ef1d2a70ca915a07"
     
     console.log('Received webhook payload:', JSON.stringify(webhookPayload, null, 2))
     
     // Function to convert Central time to UTC
-    const convertToUTC = (date: string, time: string) => {
+    const convertToUTC = (date: string | null, time: string | null) => {
       try {
         // Validate inputs
         if (!date || !time) {
-          console.error('Convert to UTC:Missing required date/time fields:', { date, time });
-          return "";
+          console.error('Convert to UTC: Missing required date/time fields:', { date, time });
+          return null;
         }
 
         console.log('Converting date/time:', { date, time });
@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
         const dateObj = new Date(dateTimeStr);
         if (isNaN(dateObj.getTime())) {
           console.error('Invalid date string:', dateTimeStr);
-          return "";
+          return null;
         }
 
         console.log('Initial date object:', dateObj.toISOString());
@@ -53,8 +53,18 @@ export default defineEventHandler(async (event) => {
         return result;
       } catch (error) {
         console.error('Error converting date to UTC:', error);
-        return "";
+        return null;
       }
+    };
+
+    // Helper function to calculate end time if not provided (defaults to 2 hours after start)
+    const calculateEndTime = (startDate: string, startTime: string) => {
+      const startUTC = convertToUTC(startDate, startTime);
+      if (!startUTC) return null;
+      
+      const endDate = new Date(startUTC);
+      endDate.setHours(endDate.getHours() + 2); // Default 2 hour duration
+      return endDate.toISOString();
     };
     
     // Map Swoogo pillar values to Webflow pillar IDs
@@ -64,6 +74,17 @@ export default defineEventHandler(async (event) => {
       'Start': '67ce5760f155bc0716caaecd'
     }
     
+    // Get start and end dates/times, with fallbacks
+    const startDate = webhookPayload.event.start_date;
+    const startTime = webhookPayload.event.start_time;
+    // Use end_date/end_time if available, otherwise fall back to close_date/close_time, or calculate from start
+    const endDate = webhookPayload.event.end_date || webhookPayload.event.close_date;
+    const endTime = webhookPayload.event.end_time || webhookPayload.event.close_time;
+
+    // Convert dates for Webflow
+    const webflowStartDateTime = convertToUTC(startDate, startTime);
+    const webflowEndDateTime = convertToUTC(endDate, endTime) || calculateEndTime(startDate, startTime) || "";
+
     // Map Swoogo webhook data to Webflow fields
     const webflowFields = {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "", // Map pillar value to ID
@@ -73,31 +94,14 @@ export default defineEventHandler(async (event) => {
       "meeting-room": "", // Not provided in Swoogo payload
       shortdescription: "", // Will be updated later when Swoogo field is added
       location: webhookPayload.event.event_location_name || "", // Only use location name
-      "end-date-time": convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
-      "start-date-time": convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
+      "end-date-time": webflowEndDateTime,
+      "start-date-time": webflowStartDateTime || "",
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
       name: webhookPayload.event.name,
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-') // Clean up URL to make valid slug
     }
 
 
-    // OfficeRnD code commented out - focusing on Webflow only
-    // const startDateTime = convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time);
-    // const endDateTime = convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time);
-    
-    // //Map Officernd v2 API fields
-    // const officerndFields = {
-    //   title: webhookPayload.event.name,
-    //   location: officeId, // Single location ID
-    //   start: startDateTime, // ISO 8601 UTC format
-    //   end: endDateTime, // ISO 8601 UTC format
-    //   timezone: "America/Chicago",
-    //   where: "Gradient",
-    //   description: webhookPayload.event.description || "",
-    //   links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
-    //   image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || ""
-    // }
-    
     // Validate required fields
     if (!webflowFields.name) {
       return {
@@ -133,55 +137,94 @@ export default defineEventHandler(async (event) => {
     const newItem = await response.json()
     console.log('Created new item:', newItem)
 
-    // OfficeRnD code commented out - focusing on Webflow only
-    // // Get OfficeRnD OAuth token
-    // const optionsRnd = {
-    //   method: 'POST',
-    //   headers: {
-    //     accept: 'application/json',
-    //     'content-type': 'application/x-www-form-urlencoded'
-    //   },
-    //   body: new URLSearchParams({
-    //     client_id: process.env.OFFICERND_CLIENT_ID || "",
-    //     client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
-    //     grant_type: 'client_credentials',
-    //     scope: 'officernd.api.read officernd.api.write'
-    //   })
-    // };
+    // Create OfficeRnD event (non-blocking - won't fail if this errors)
+    let officerndEvent = null;
+    try {
+      // Convert dates for OfficeRnD (use same logic as Webflow)
+      const startDateTime = convertToUTC(startDate, startTime);
+      const endDateTime = convertToUTC(endDate, endTime) || calculateEndTime(startDate, startTime);
+      
+      // Validate that we have both start and end for OfficeRnD
+      if (!startDateTime || !endDateTime) {
+        console.error('Cannot create OfficeRnD event: Missing required start or end date/time', {
+          start_date: startDate,
+          start_time: startTime,
+          end_date: endDate,
+          end_time: endTime,
+          converted_start: startDateTime,
+          converted_end: endDateTime
+        });
+      } else {
+        // Map Officernd v2 API fields
+        const officerndFields = {
+          title: webhookPayload.event.name,
+          location: officeId, // Single location ID
+          start: startDateTime, // ISO 8601 UTC format
+          end: endDateTime, // ISO 8601 UTC format
+          timezone: "America/Chicago",
+          where: "Gradient",
+          description: webhookPayload.event.description || "",
+          links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
+          image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || ""
+        }
+        
+        console.log('Prepared OfficeRnD fields:', JSON.stringify(officerndFields, null, 2))
+        
+        // Get OfficeRnD OAuth token
+        const optionsRnd = {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            client_id: process.env.OFFICERND_CLIENT_ID || "",
+            client_secret: process.env.OFFICERND_CLIENT_SECRET || "",
+            grant_type: 'client_credentials',
+            scope: 'officernd.api.read officernd.api.write'
+          })
+        };
 
-    // // Get OAuth token
-    // const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
-    // if (!tokenResponse.ok) {
-    //   console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
-    //   throw new Error('Failed to get OfficeRnD token');
-    // }
-    // const tokenData = await tokenResponse.json();
+        // Get OAuth token
+        const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
+        if (!tokenResponse.ok) {
+          console.error('Failed to get OfficeRnD token:', await tokenResponse.text());
+          throw new Error('Failed to get OfficeRnD token');
+        }
+        const tokenData = await tokenResponse.json();
 
-    // // Create event in OfficeRnD
-    // const createEventResponse = await fetch('https://app.officernd.com/api/v2/organizations/gradient/events', {
-    //   method: 'POST',
-    //   headers: {
-    //     accept: 'application/json',
-    //     'content-type': 'application/json',
-    //     authorization: `Bearer ${tokenData.access_token}`
-    //   },
-    //   body: JSON.stringify(officerndFields)
-    // });
+        // Create event in OfficeRnD
+        const createEventResponse = await fetch('https://app.officernd.com/api/v2/organizations/gradient/events', {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            authorization: `Bearer ${tokenData.access_token}`
+          },
+          body: JSON.stringify(officerndFields)
+        });
 
-    // if (!createEventResponse.ok) {
-    //   console.error('Failed to create OfficeRnD event:', await createEventResponse.text());
-    //   throw new Error('Failed to create OfficeRnD event');
-    // }
+        if (!createEventResponse.ok) {
+          const errorText = await createEventResponse.text();
+          console.error('Failed to create OfficeRnD event:', errorText);
+          throw new Error(`Failed to create OfficeRnD event: ${errorText}`);
+        }
 
-    // const officerndEvent = await createEventResponse.json();
-    // console.log('Created OfficeRnD event:', officerndEvent);
-    // console.log('OfficeRnD event ID:', officerndEvent._id);
+        officerndEvent = await createEventResponse.json();
+        console.log('Created OfficeRnD event:', officerndEvent);
+        console.log('OfficeRnD event ID:', officerndEvent._id);
+      }
+    } catch (officerndError) {
+      // Log error but don't fail the entire request - Webflow was created successfully
+      console.error('OfficeRnD event creation failed (non-blocking):', officerndError);
+    }
     
     return {
       statusCode: 200,
       body: {
         webflow: newItem,
-        message: 'Event created successfully in Webflow'
+        officernd: officerndEvent,
+        message: 'Event created successfully in Webflow' + (officerndEvent ? ' and OfficeRnD' : ' (OfficeRnD creation skipped)')
       }
     }
   } catch (error) {
