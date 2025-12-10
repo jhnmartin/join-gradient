@@ -135,7 +135,7 @@ export default defineEventHandler(async (event) => {
       throw new Error(`Failed to create item: ${response.statusText} - ${errorText}`)
     }
     
-    const newItem = await response.json()
+    let newItem = await response.json()
     console.log('Created new item:', newItem)
 
     // Create OfficeRnD event (non-blocking - won't fail if this errors)
@@ -218,6 +218,40 @@ export default defineEventHandler(async (event) => {
         officerndEvent = await createEventResponse.json();
         console.log('Created OfficeRnD event:', officerndEvent);
         console.log('OfficeRnD event ID:', officerndEvent._id);
+
+        // Update Webflow item with OfficeRnD ID
+        if (officerndEvent._id && newItem?.items?.[0]?.id) {
+          try {
+            const webflowItemId = newItem.items[0].id;
+            console.log('Updating Webflow item with OfficeRnD ID:', webflowItemId);
+            
+            const updateResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`, {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fieldData: {
+                  rnd: officerndEvent._id
+                }
+              })
+            });
+
+            if (!updateResponse.ok) {
+              const errorText = await updateResponse.text();
+              console.error('Failed to update Webflow item with OfficeRnD ID:', errorText);
+              // Don't throw - this is non-critical
+            } else {
+              const updatedItem = await updateResponse.json();
+              console.log('Successfully updated Webflow item with OfficeRnD ID');
+              // Update newItem with the latest data
+              newItem = updatedItem;
+            }
+          } catch (updateError) {
+            console.error('Error updating Webflow item with OfficeRnD ID (non-blocking):', updateError);
+          }
+        }
       }
     } catch (officerndError) {
       // Log error but don't fail the entire request - Webflow was created successfully
