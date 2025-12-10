@@ -106,9 +106,11 @@ export default defineEventHandler(async (event) => {
 
     const webflowItem = searchResults.items[0]
     const webflowItemId = webflowItem.id
+    const webflowIsDraft = webflowItem.isDraft === true
 
     console.log('Found Webflow item:', webflowItemId)
     console.log('Swoogo event status:', webhookPayload.event.status)
+    console.log('Webflow item isDraft:', webflowIsDraft)
     
     // Map Swoogo pillar values to Webflow pillar IDs
     const pillarMapping: Record<string, string> = {
@@ -137,12 +139,30 @@ export default defineEventHandler(async (event) => {
     console.log('Prepared Webflow fields:', JSON.stringify(webflowFields, null, 2))
     
     // Determine if we're updating draft or live based on Swoogo event status
-    const isDraft = webhookPayload.event.status === "draft"
-    const endpoint = isDraft 
-      ? `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`
-      : `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}/live`
+    const swoogoIsDraft = webhookPayload.event.status === "draft"
     
-    console.log(`Updating Webflow item (${isDraft ? 'draft' : 'live'}):`, webflowItemId)
+    // If Swoogo is live but Webflow is still in draft, we need to publish it
+    const needsPublishing = !swoogoIsDraft && webflowIsDraft
+    
+    // Determine endpoint and draft status
+    let endpoint: string
+    let isDraft: boolean
+    
+    if (swoogoIsDraft) {
+      // Swoogo is draft - update draft version
+      endpoint = `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`
+      isDraft = true
+    } else {
+      // Swoogo is live - update live version
+      endpoint = `https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}/live`
+      isDraft = false
+    }
+    
+    if (needsPublishing) {
+      console.log('Publishing Webflow item (transitioning from draft to live):', webflowItemId)
+    } else {
+      console.log(`Updating Webflow item (${swoogoIsDraft ? 'draft' : 'live'}):`, webflowItemId)
+    }
     
     // Update Webflow item
     const webflowResponse = await fetch(endpoint, {
