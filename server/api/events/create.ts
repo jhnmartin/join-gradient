@@ -98,7 +98,8 @@ export default defineEventHandler(async (event) => {
       "start-date-time": webflowStartDateTime || "",
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
       name: webhookPayload.event.name,
-      slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-') // Clean up URL to make valid slug
+      slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-'), // Clean up URL to make valid slug
+      swoogo: webhookPayload.event.id?.toString() || "" // Save Swoogo event ID
     }
 
 
