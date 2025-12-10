@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
   try {
     const collectionId = "67af76d9b4dc5bc8f0aa0b6f"
     const webhookPayload = await readBody(event)
-    const officeId = "6602e576ef1d2a70ca915a07"
     
     console.log('Received webhook payload:', JSON.stringify(webhookPayload, null, 2))
     
@@ -138,6 +137,9 @@ export default defineEventHandler(async (event) => {
     let newItem = await response.json()
     console.log('Created new item:', newItem)
 
+    // OfficeRnD location/office ID (hardcoded for Gradient location)
+    const officeId = "6602e576ef1d2a70ca915a07"
+
     // Create OfficeRnD event (non-blocking - won't fail if this errors)
     let officerndEvent = null;
     try {
@@ -155,11 +157,13 @@ export default defineEventHandler(async (event) => {
           converted_start: startDateTime,
           converted_end: endDateTime
         });
+      } else if (!officeId) {
+        console.error('Cannot create OfficeRnD event: Missing office ID from Webflow item');
       } else {
         // Map Officernd v2 API fields
         const officerndFields = {
           title: webhookPayload.event.name,
-          location: officeId, // Single location ID
+          location: officeId, // Single location ID from Webflow
           start: startDateTime, // ISO 8601 UTC format
           end: endDateTime, // ISO 8601 UTC format
           timezone: "America/Chicago",

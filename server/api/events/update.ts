@@ -17,8 +17,6 @@ export default defineEventHandler(async (event) => {
     console.log('Reading webhook payload...')
     const webhookPayload = await readBody(event)
     console.log('Webhook payload received:', JSON.stringify(webhookPayload, null, 2))
-    
-    const officeId = "6602e576ef1d2a70ca915a07"
     const swoogoId = webhookPayload.event.id?.toString() || "";
     
     if (!swoogoId) {
@@ -120,12 +118,14 @@ export default defineEventHandler(async (event) => {
     const webflowItem = searchResults.items[0]
     const webflowItemId = webflowItem.id
     const rndId = webflowItem.fieldData?.rnd || ""
+    // OfficeRnD location/office ID (hardcoded for Gradient location)
+    const officeId = "6602e576ef1d2a70ca915a07"
 
     console.log('Found Webflow item:', webflowItemId)
-    console.log('OfficeRnD ID from Webflow:', rndId)
+    console.log('OfficeRnD event ID from Webflow:', rndId)
 
     if (!rndId) {
-      console.warn('No OfficeRnD ID found in Webflow item, skipping OfficeRnD update')
+      console.warn('No OfficeRnD event ID found in Webflow item, skipping OfficeRnD update')
     }
 
     // Get start and end dates/times, with fallbacks
@@ -160,15 +160,17 @@ export default defineEventHandler(async (event) => {
 
     console.log('Prepared Webflow fields:', JSON.stringify(webflowFields, null, 2))
     
-    console.log('Updating Webflow item:', webflowItemId)
-    // Update Webflow item
-    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`, {
+    console.log('Updating Webflow item (live):', webflowItemId)
+    // Update Webflow item (live version, not draft)
+    const webflowResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}/live`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        isArchived: false,
+        isDraft: false,
         fieldData: webflowFields
       })
     })
@@ -203,7 +205,7 @@ export default defineEventHandler(async (event) => {
           // Map Officernd v2 API fields
           const officerndFields = {
             title: webhookPayload.event.name,
-            location: officeId, // Single location ID
+            location: officeId, // Single location ID from Webflow
             start: startDateTime, // ISO 8601 UTC format
             end: endDateTime, // ISO 8601 UTC format
             timezone: "America/Chicago",
