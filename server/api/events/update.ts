@@ -77,8 +77,8 @@ export default defineEventHandler(async (event) => {
       "meeting-room": "",
       shortdescription: "",
       location: webhookPayload.event.event_location_name || "",
-      "end-date-time": "", // Will be handled later
-      "start-date-time": "", // Will be handled later
+      "end-date": "", // Will be handled later
+      "start-date": "", // Will be handled later
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "",
       name: webhookPayload.event.name,
       slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-'),
