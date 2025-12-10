@@ -14,7 +14,23 @@ export default defineEventHandler(async (event) => {
     const webhookPayload = await readBody(event)
     const officeId = "6602e576ef1d2a70ca915a07"
     
-    console.log('Received webhook payload:', webhookPayload)
+    console.log('Received webhook payload:', JSON.stringify(webhookPayload, null, 2))
+    
+    // Validate date/time fields exist
+    if (!webhookPayload.event?.start_date || !webhookPayload.event?.start_time) {
+      return {
+        statusCode: 400,
+        body: {
+          error: 'Missing required date/time fields',
+          details: {
+            start_date: webhookPayload.event?.start_date,
+            start_time: webhookPayload.event?.start_time,
+            end_date: webhookPayload.event?.end_date,
+            end_time: webhookPayload.event?.end_time
+          }
+        }
+      }
+    }
     
     // Function to convert Central time to UTC
     const convertToUTC = (date: string, time: string) => {
@@ -81,17 +97,42 @@ export default defineEventHandler(async (event) => {
     }
 
 
-    //Map Officernd fields
+    // Convert dates for OfficeRnD
+    const startDateTime = convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time);
+    const endDateTime = convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time);
+    
+    // Validate converted dates
+    if (!startDateTime || !endDateTime) {
+      return {
+        statusCode: 400,
+        body: {
+          error: 'Failed to convert date/time to UTC',
+          details: {
+            start_date: webhookPayload.event.start_date,
+            start_time: webhookPayload.event.start_time,
+            end_date: webhookPayload.event.end_date,
+            end_time: webhookPayload.event.end_time,
+            converted_start: startDateTime,
+            converted_end: endDateTime
+          }
+        }
+      }
+    }
+
+    //Map Officernd v2 API fields
     const officerndFields = {
       title: webhookPayload.event.name,
-      office: officeId,
-      start: convertToUTC(webhookPayload.event.start_date, webhookPayload.event.start_time),
-      end: convertToUTC(webhookPayload.event.end_date, webhookPayload.event.end_time),
-      links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
-      image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "", // Add https: prefix if URL starts with //
+      location: officeId, // Single location ID
+      start: startDateTime, // ISO 8601 UTC format
+      end: endDateTime, // ISO 8601 UTC format
       timezone: "America/Chicago",
-      description: ""
+      where: "Gradient",
+      description: webhookPayload.event.description || "",
+      links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
+      image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "" // Add https: prefix if URL starts with //
     }
+    
+    console.log('Prepared OfficeRnD fields:', JSON.stringify(officerndFields, null, 2))
     
     // Validate required fields
     if (!webflowFields.name) {
@@ -153,7 +194,7 @@ export default defineEventHandler(async (event) => {
     const tokenData = await tokenResponse.json();
 
     // Create event in OfficeRnD
-    const createEventResponse = await fetch('https://app.officernd.com/api/v1/organizations/gradient/events', {
+    const createEventResponse = await fetch('https://app.officernd.com/api/v2/organizations/gradient/events', {
       method: 'POST',
       headers: {
         accept: 'application/json',
