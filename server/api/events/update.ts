@@ -220,6 +220,123 @@ export default defineEventHandler(async (event) => {
       
       console.log('Successfully published Webflow item')
       
+      // Create OfficeRnD event after successful publish
+      try {
+        // Convert dates for OfficeRnD (use same logic as Webflow)
+        const startDateTime = convertToUTC(startDate, startTime);
+        const endDateTime = convertToUTC(endDate, endTime) || calculateEndTime(startDate, startTime);
+        
+        // OfficeRnD location/office ID (hardcoded for Gradient location)
+        const officeId = "6602e576ef1d2a70ca915a07"
+        
+        if (!startDateTime || !endDateTime) {
+          console.error('Cannot create OfficeRnD event: Missing required start or end date/time', {
+            start_date: startDate,
+            start_time: startTime,
+            end_date: endDate,
+            end_time: endTime,
+            converted_start: startDateTime,
+            converted_end: endDateTime
+          });
+        } else {
+          // Map Officernd v2 API fields
+          const officerndFields = {
+            title: webhookPayload.event.name,
+            location: officeId, // Single location ID
+            start: startDateTime, // ISO 8601 UTC format
+            end: endDateTime, // ISO 8601 UTC format
+            timezone: "America/Chicago",
+            where: "Gradient",
+            description: webhookPayload.event.description || "",
+            links: [`${webhookPayload.event.domain}/${webhookPayload.event.url}`],
+            image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || ""
+          }
+          
+          console.log('Prepared OfficeRnD fields:', JSON.stringify(officerndFields, null, 2))
+          
+          // Get OfficeRnD OAuth token with v2 scopes
+          const encodedParams = new URLSearchParams();
+          encodedParams.set('client_id', process.env.OFFICERND_CLIENT_ID || "");
+          encodedParams.set('client_secret', process.env.OFFICERND_CLIENT_SECRET || "");
+          encodedParams.set('grant_type', 'client_credentials');
+          encodedParams.set('scope', 'flex.collaboration.events.read flex.collaboration.events.create flex.collaboration.events.update flex.collaboration.events.delete');
+
+          const optionsRnd = {
+            method: 'POST',
+            headers: {
+              accept: 'application/json',
+              'content-type': 'application/x-www-form-urlencoded'
+            },
+            body: encodedParams
+          };
+
+          // Get OAuth token
+          const tokenResponse = await fetch('https://identity.officernd.com/oauth/token', optionsRnd);
+          if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            console.error('Failed to get OfficeRnD token. Status:', tokenResponse.status);
+            console.error('Error response:', errorText);
+            throw new Error(`Failed to get OfficeRnD token: ${tokenResponse.status} - ${errorText}`);
+          }
+          const tokenData = await tokenResponse.json();
+          console.log('Successfully obtained OfficeRnD token')
+
+          // Create event in OfficeRnD v2 API
+          console.log('Creating OfficeRnD event')
+          const createEventResponse = await fetch('https://app.officernd.com/api/v2/organizations/gradient/events', {
+            method: 'POST',
+            headers: {
+              accept: 'application/json',
+              'content-type': 'application/json',
+              authorization: `Bearer ${tokenData.access_token}`
+            },
+            body: JSON.stringify(officerndFields)
+          });
+
+          if (!createEventResponse.ok) {
+            const errorText = await createEventResponse.text();
+            console.error('Failed to create OfficeRnD event. Status:', createEventResponse.status);
+            console.error('Error response:', errorText);
+            throw new Error(`Failed to create OfficeRnD event: ${createEventResponse.status} - ${errorText}`);
+          }
+
+          const officerndEvent = await createEventResponse.json();
+          console.log('Created OfficeRnD event:', officerndEvent);
+          console.log('OfficeRnD event ID:', officerndEvent._id);
+
+          // Update Webflow item with OfficeRnD ID
+          if (officerndEvent._id) {
+            console.log('Updating Webflow item with OfficeRnD ID:', officerndEvent._id);
+            
+            const updateRndResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}/items/${webflowItemId}`, {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fieldData: {
+                  rnd: officerndEvent._id
+                }
+              })
+            });
+
+            if (!updateRndResponse.ok) {
+              const errorText = await updateRndResponse.text();
+              console.error('Failed to update Webflow item with OfficeRnD ID:', errorText);
+              // Don't throw - OfficeRnD event was created successfully
+            } else {
+              const updatedWithRnd = await updateRndResponse.json();
+              updatedWebflowItem = updatedWithRnd;
+              console.log('Successfully updated Webflow item with OfficeRnD ID');
+            }
+          }
+        }
+      } catch (officerndError) {
+        // Log error but don't fail the entire request - Webflow was published successfully
+        console.error('OfficeRnD event creation failed (non-blocking):', officerndError);
+      }
+      
     } else if (!swoogoIsDraft && !webflowIsDraft) {
       // Case 3: Swoogo live / Webflow live - update live endpoint
       console.log('Case 3: Updating Webflow live item (Swoogo live / Webflow live)')
