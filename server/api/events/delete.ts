@@ -57,9 +57,11 @@ export default defineEventHandler(async (event) => {
 
     const webflowItem = searchResults.items[0]
     const webflowItemId = webflowItem.id
+    const webflowIsDraft = webflowItem.isDraft === true
     const rndId = webflowItem.fieldData?.rnd || ""
 
     console.log('Found Webflow item:', webflowItemId)
+    console.log('Webflow item isDraft:', webflowIsDraft)
     console.log('OfficeRnD event ID from Webflow:', rndId)
 
     // Delete from OfficeRnD if we have the RND ID
@@ -137,6 +139,56 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('Successfully deleted Webflow item:', webflowItemId)
+    
+    // Publish the site to make the deletion live (if item was published)
+    if (!webflowIsDraft) {
+      const cmsLocaleId = "674f3bbeda46bee36857e306"
+      console.log('Publishing Webflow site to reflect deletion')
+      
+      // Get site ID from collection
+      const collectionResponse = await fetch(`https://api.webflow.com/v2/collections/${collectionId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (collectionResponse.ok) {
+        const collectionData = await collectionResponse.json()
+        const siteId = collectionData.siteId
+        
+        if (siteId) {
+          // Publish the site
+          const publishResponse = await fetch(`https://api.webflow.com/v2/sites/${siteId}/publish`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.WEBFLOW_ACCESS_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              domains: []
+            })
+          })
+          
+          if (!publishResponse.ok) {
+            const errorText = await publishResponse.text()
+            console.error('Failed to publish Webflow site. Status:', publishResponse.status)
+            console.error('Error response:', errorText)
+            // Don't throw - deletion was successful, publish is just to update the live site
+            console.warn('Site publish failed, but item deletion was successful')
+          } else {
+            console.log('Successfully published Webflow site')
+          }
+        } else {
+          console.warn('Could not find site ID from collection, skipping site publish')
+        }
+      } else {
+        console.warn('Could not fetch collection to get site ID, skipping site publish')
+      }
+    } else {
+      console.log('Item was a draft, no need to publish site')
+    }
     
     return {
       statusCode: 200,
