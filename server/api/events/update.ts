@@ -122,6 +122,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Map Swoogo webhook data to Webflow fields
+    // Note: slug is excluded from updates to avoid unique constraint conflicts
     const webflowFields = {
       pillar: pillarMapping[webhookPayload.event.c_95742?.value as string] || "",
       "is-featured-event": false,
@@ -134,7 +135,6 @@ export default defineEventHandler(async (event) => {
       "start-date-time": webflowStartDateTime,
       image: webhookPayload.event.c_95697?.startsWith('//') ? `https:${webhookPayload.event.c_95697}` : webhookPayload.event.c_95697 || "",
       name: webhookPayload.event.name,
-      slug: webhookPayload.event.url.replace(/^\//, '').replace(/[^a-zA-Z0-9-_]/g, '-'),
       swoogo: swoogoId
     }
 
